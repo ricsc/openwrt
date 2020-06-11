@@ -340,15 +340,94 @@
 	};
 };
 
+// &mdio0 {
+// 	status = "okay";
+
+// 	pinctrl-0 = <&mdio0_pins>;
+// 	pinctrl-names = "default";
+
+// 	switch@10 {
+// 		compatible = "qca,qca8337";
+// 		#address-cells = <1>;
+// 		#size-cells = <0>;
+// 		reg = <0x10>;
+
+// 		ports {
+// 			#address-cells = <1>;
+// 			#size-cells = <0>;
+
+// 			port@0 {
+// 				reg = <0>;
+// 				label = "cpu";
+// 				ethernet = <&gmac1>;
+// 				phy-mode = "rgmii-id";
+
+// 				fixed-link {
+// 					speed = <1000>;
+// 					full-duplex;
+// 				};
+// 			};
+
+// 			port@1 {
+// 				reg = <1>;
+// 				label = "lan1";
+// 			};
+
+// 			port@2 {
+// 				reg = <2>;
+// 				label = "lan2";
+// 			};
+
+// 			port@3 {
+// 				reg = <3>;
+// 				label = "lan3";
+// 			};
+
+// 			port@4 {
+// 				reg = <4>;
+// 				label = "lan4";
+// 			};
+
+// 			port@5 {
+// 				reg = <5>;
+// 				label = "wan";
+// 			};
+
+// 			/*
+// 			port@6 {
+// 					reg = <0>;
+// 					label = "cpu";
+// 					ethernet = <&gmac2>;
+// 					phy-mode = "rgmii";
+
+// 					fixed-link {
+// 							speed = <1000>;
+// 							full-duplex;
+// 							pause;
+// 							asym-pause;
+// 					};
+// 			};
+// 			*/
+// 		};
+// 	};
+// };
+
 &gmac1 {
 	status = "okay";
+	compatible = "qcom,nss-gmac";
+	reg = <0x37200000 0x200000>;
+	interrupts = <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
 	phy-mode = "rgmii";
 	qcom,id = <1>;
-	qcom,phy_mdio_addr = <4>;
-	qcom,poll_required = <0>;
-	qcom,rgmii_delay = <1>;
+	qcom,pcs-chanid = <0>;
+	qcom,phy-mdio-addr = <4>;
+	qcom,poll-required = <0>;
+	qcom,rgmii-delay = <1>;
 	qcom,phy_mii_type = <0>;
 	qcom,emulation = <0>;
+	qcom,forced-speed = <1000>;
+	qcom,forced-duplex = <1>;
+	qcom,socver = <0>;
 	qcom,irq = <255>;
 	mdiobus = <&mdio0>;
 
@@ -365,13 +444,20 @@
 
 &gmac2 {
 	status = "okay";
+	compatible = "qcom,nss-gmac";
+	reg = <0x37400000 0x200000>;
+	interrupts = <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH>;
 	phy-mode = "sgmii";
 	qcom,id = <2>;
-	qcom,phy_mdio_addr = <0>;	/* none */
-	qcom,poll_required = <0>;	/* no polling */
-	qcom,rgmii_delay = <0>;
+	qcom,pcs-chanid = <1>;
+	qcom,phy-mdio-addr = <0>;	/* none */
+	qcom,poll-required = <0>;	/* no polling */
+	qcom,rgmii-delay = <0>;
 	qcom,phy_mii_type = <1>;
 	qcom,emulation = <0>;
+	qcom,forced-speed = <1000>;
+	qcom,forced-duplex = <1>;
+	qcom,socver = <0>;
 	qcom,irq = <258>;
 	mdiobus = <&mdio0>;
 
