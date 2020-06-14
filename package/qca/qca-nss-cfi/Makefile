@@ -48,13 +48,13 @@ endef
 #   TITLE:=Kernel driver for NSS cfi
 #   FILES:=$(PKG_BUILD_DIR)/$(CFI_OCF_DIR)/qca-nss-cfi-ocf.ko
 
-ifdef CFI_IPSEC_DIR
-  FILES+=$(PKG_BUILD_DIR)/$(CFI_IPSEC_DIR)/qca-nss-ipsec.ko
-  AUTOLOAD:=$(call AutoLoad,61,qca-nss-cfi-ocf qca-nss-ipsec)
-else
-  AUTOLOAD:=$(call AutoLoad,61,qca-nss-cfi-ocf)
-endif
-endef
+# ifdef CFI_IPSEC_DIR
+#   FILES+=$(PKG_BUILD_DIR)/$(CFI_IPSEC_DIR)/qca-nss-ipsec.ko
+#   AUTOLOAD:=$(call AutoLoad,61,qca-nss-cfi-ocf qca-nss-ipsec)
+# else
+#   AUTOLOAD:=$(call AutoLoad,61,qca-nss-cfi-ocf)
+# endif
+# endef
 
 define Build/InstallDev/qca-nss-cfi
 	$(INSTALL_DIR) $(1)/usr/include/qca-nss-cfi
