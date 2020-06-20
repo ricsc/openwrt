@@ -1,18 +1,6 @@
---- a/include/linux/skbuff.h
-+++ b/include/linux/skbuff.h
-@@ -825,6 +825,9 @@ struct sk_buff {
- 	__u8			decrypted:1;
- #endif
- 	__u8			gro_skip:1;
-+#ifdef CONFIG_SHORTCUT_FE
-+	__u8			fast_forwarded:1;
-+#endif
- 
- #ifdef CONFIG_NET_SCHED
- 	__u16			tc_index;	/* traffic control index */
 --- a/include/linux/if_bridge.h
 +++ b/include/linux/if_bridge.h
-@@ -51,6 +51,8 @@ struct br_ip_list {
+@@ -51,6 +51,8 @@
  #define BR_DEFAULT_AGEING_TIME	(300 * HZ)
  
  extern void brioctl_set(int (*ioctl_hook)(struct net *, unsigned int, void __user *));
@@ -97,111 +85,27 @@
  
  	return nf_conntrack_eventmask_report(1 << event, ct, 0, 0);
  #else
---- a/include/linux/timer.h
-+++ b/include/linux/timer.h
-@@ -17,6 +17,9 @@ struct timer_list {
- 	unsigned long		expires;
- 	void			(*function)(struct timer_list *);
- 	u32			flags;
-+#ifdef CONFIG_SHORTCUT_FE
-+	unsigned long		cust_data;
-+#endif
- 
- #ifdef CONFIG_LOCKDEP
- 	struct lockdep_map	lockdep_map;
---- a/net/Kconfig
-+++ b/net/Kconfig
-@@ -473,3 +473,6 @@ config HAVE_CBPF_JIT
- # Extended BPF JIT (eBPF)
- config HAVE_EBPF_JIT
- 	bool
-+
-+config SHORTCUT_FE
-+	bool "Enables kernel network stack path for Shortcut  Forwarding Engine
---- a/net/core/dev.c
-+++ b/net/core/dev.c
-@@ -3192,8 +3192,17 @@ static int xmit_one(struct sk_buff *skb,
- 	unsigned int len;
- 	int rc;
- 
-+#ifdef CONFIG_SHORTCUT_FE
-+	/* If this skb has been fast forwarded then we don't want it to
-+	 * go to any taps (by definition we're trying to bypass them).
-+	 */
-+	if (!skb->fast_forwarded) {
-+#endif
- 	if (dev_nit_active(dev))
- 		dev_queue_xmit_nit(skb, dev);
-+#ifdef CONFIG_SHORTCUT_FE
-+	}
-+#endif
- 
- #ifdef CONFIG_ETHERNET_PACKET_MANGLE
- 	if (!dev->eth_mangle_tx ||
-@@ -4684,6 +4693,11 @@ void netdev_rx_handler_unregister(struct
- }
- EXPORT_SYMBOL_GPL(netdev_rx_handler_unregister);
- 
-+#ifdef CONFIG_SHORTCUT_FE
-+int (*athrs_fast_nat_recv)(struct sk_buff *skb) __rcu __read_mostly;
-+EXPORT_SYMBOL_GPL(athrs_fast_nat_recv);
-+#endif
-+
- /*
-  * Limit the use of PFMEMALLOC reserves to those protocols that implement
-  * the special handling of PFMEMALLOC skbs.
-@@ -4732,6 +4746,9 @@ static int __netif_receive_skb_core(stru
- 	bool deliver_exact = false;
- 	int ret = NET_RX_DROP;
- 	__be16 type;
-+#ifdef CONFIG_SHORTCUT_FE
-+	int (*fast_recv)(struct sk_buff *skb);
-+#endif
- 
- 	net_timestamp_check(!netdev_tstamp_prequeue, skb);
- 
-@@ -4770,6 +4787,16 @@ another_round:
- 			goto out;
- 	}
- 
-+#ifdef CONFIG_SHORTCUT_FE
-+	fast_recv = rcu_dereference(athrs_fast_nat_recv);
-+	if (fast_recv) {
-+		if (fast_recv(skb)) {
-+			ret = NET_RX_SUCCESS;
-+			goto out;
-+		}
-+	}
-+#endif
-+
- 	if (skb_skip_tc_classify(skb))
- 		goto skip_classify;
- 
 --- a/net/netfilter/nf_conntrack_proto_tcp.c
 +++ b/net/netfilter/nf_conntrack_proto_tcp.c
-@@ -33,11 +33,17 @@
+@@ -33,11 +33,13 @@
  
  /* Do not check the TCP window for incoming packets  */
 -static int nf_ct_tcp_no_window_check __read_mostly = 1;
 +int nf_ct_tcp_no_window_check __read_mostly = 1;
-+#ifdef CONFIG_SHORTCUT_FE
 +EXPORT_SYMBOL_GPL(nf_ct_tcp_no_window_check);
-+#endif
  
  /* "Be conservative in what you do,
      be liberal in what you accept from others."
      If it's non-zero, we mark only out of window RST segments as INVALID. */
 -static int nf_ct_tcp_be_liberal __read_mostly = 0;
 +int nf_ct_tcp_be_liberal __read_mostly = 0;
-+#ifdef CONFIG_SHORTCUT_FE
 +EXPORT_SYMBOL_GPL(nf_ct_tcp_be_liberal);
-+#endif
  
  /* If it is set to zero, we disable picking up already established
     connections. */
 --- a/net/bridge/br_if.c
 +++ b/net/bridge/br_if.c
-@@ -757,3 +757,26 @@ bool br_port_flag_is_set(const struct ne
+@@ -757,3 +757,26 @@
  	return p->flags & flag;
  }
  EXPORT_SYMBOL_GPL(br_port_flag_is_set);
@@ -230,7 +134,7 @@
 +EXPORT_SYMBOL_GPL(br_dev_update_stats);
 --- a/net/netfilter/Kconfig
 +++ b/net/netfilter/Kconfig
-@@ -158,6 +158,14 @@ config NF_CONNTRACK_TIMEOUT
+@@ -158,6 +158,14 @@
  
  	  If unsure, say `N'.
  
@@ -247,7 +151,7 @@
  	depends on NETFILTER_ADVANCED
 --- a/net/netfilter/nf_conntrack_core.c
 +++ b/net/netfilter/nf_conntrack_core.c
-@@ -2522,6 +2522,9 @@ int nf_conntrack_init_net(struct net *ne
+@@ -2588,6 +2588,9 @@ int nf_conntrack_init_net(struct net *ne
  	nf_conntrack_ecache_pernet_init(net);
  	nf_conntrack_helper_pernet_init(net);
  	nf_conntrack_proto_pernet_init(net);
