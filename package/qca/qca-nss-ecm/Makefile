@@ -235,6 +235,7 @@ define Build/Compile
 		EXAMPLES_BUILD_PCC="$(CONFIG_QCA_NSS_ECM_EXAMPLES_PCC)" \
 		EXAMPLES_BUILD_MARK="$(CONFIG_QCA_NSS_ECM_EXAMPLES_MARK)" \
 		EXAMPLES_BUILD_OVS="$(CONFIG_QCA_NSS_ECM_OVS)" \
+		ECM_FRONT_END_SFE_ENABLE="$(CONFIG_QCA_ECM_SFE_SUPPORT)" \
 		modules
 endef
 
@@ -256,6 +257,10 @@ menu "ECM Configuration"
 		bool "Build OVS classifier external module"
 		help
 			Selecting this will build the OVS classifier external module.
+		default n
+
+	config QCA_ECM_SFE_SUPPORT
+		bool "Add SFE support to ECM driver"
 		default n
 endmenu
 endef
