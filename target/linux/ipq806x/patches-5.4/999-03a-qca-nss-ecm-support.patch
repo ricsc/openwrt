@@ -263,6 +263,14 @@
  
 --- a/include/net/bonding.h
 +++ b/include/net/bonding.h
+@@ -238,6 +238,7 @@ struct bonding {
+ #endif /* CONFIG_DEBUG_FS */
+ 	struct rtnl_link_stats64 bond_stats;
+ 	struct lock_class_key stats_lock_key;
++	u32      id; /* QCA NSS ECM support */
+ };
+
+ #define bond_slave_get_rcu(dev) \
 @@ -749,4 +749,12 @@ static inline void bond_tx_drop(struct n
  	dev_kfree_skb_any(skb);
  }
@@ -573,6 +581,14 @@
 +/* QCA NSS ECM support - End */
 --- a/drivers/net/bonding/bond_main.c
 +++ b/drivers/net/bonding/bond_main.c
+@@ -199,6 +199,7 @@ atomic_t netpoll_block_tx = ATOMIC_INIT(
+ #endif
+
+ unsigned int bond_net_id __read_mostly;
++static unsigned long bond_id_mask = 0xFFFFFFF0; /* QCA NSS ECM Support */
+
+ /*-------------------------- Forward declarations ---------------------------*/
+
 @@ -847,6 +847,23 @@ void bond_change_active_slave(struct bon
  			if (BOND_MODE(bond) == BOND_MODE_8023AD)
  				bond_3ad_handle_link_change(new_active, BOND_LINK_UP);
@@ -697,7 +713,36 @@
  }
  
  /* bond_mii_monitor
-@@ -4967,6 +5028,189 @@ static void __exit bonding_exit(void)
+@@ -4327,6 +4389,11 @@ static void bond_destructor(struct net_d
+ 	struct bonding *bond = netdev_priv(bond_dev);
+ 	if (bond->wq)
+ 		destroy_workqueue(bond->wq);
++
++	/* QCA NSS ECM Support - Start */
++	if (bond->id != (~0U))
++		clear_bit(bond->id, &bond_id_mask);
++	/* QCA NSS ECM Support - End */
+ }
+ 
+ void bond_setup(struct net_device *bond_dev)
+@@ -4872,6 +4939,16 @@ int bond_create(struct net *net, const c
+ 	rtnl_unlock();
+ 	if (res < 0)
+ 		free_netdev(bond_dev);
++
++	/* QCA NSS ECM Support - Start */
++	bond = netdev_priv(bond_dev);
++	bond->id = ~0U;
++	if (bond_id_mask != (~0UL)) {
++		bond->id = (u32)ffz(bond_id_mask);
++		set_bit(bond->id, &bond_id_mask);
++	}
++	/* QCA NSS ECM Support - End */
++
+ 	return res;
+ }
+ 
+@@ -4967,6 +5028,203 @@ static void __exit bonding_exit(void)
  #endif
  }
  
@@ -882,6 +927,20 @@
 +	}
 +}
 +EXPORT_SYMBOL(bond_get_tx_dev);
++
++int bond_get_id(struct net_device *bond_dev)
++{
++	struct bonding *bond;
++
++	if (!((bond_dev->priv_flags & IFF_BONDING) &&
++	      (bond_dev->flags & IFF_MASTER)))
++		return -EINVAL;
++
++	bond = netdev_priv(bond_dev);
++
++	return bond->id;
++}
++EXPORT_SYMBOL(bond_get_id);
 +/* QCA NSS ECM support - End */
 +
  module_init(bonding_init);
