@@ -12,18 +12,6 @@
  	__u16			tc_index;	/* traffic control index */
  #if IS_ENABLED(CONFIG_BRIDGE) && IS_ENABLED(CONFIG_BRIDGE_IGMP_SNOOPING)
  int br_multicast_list_adjacent(struct net_device *dev,
---- a/include/linux/timer.h
-+++ b/include/linux/timer.h
-@@ -17,6 +17,9 @@ struct timer_list {
- 	unsigned long		expires;
- 	void			(*function)(struct timer_list *);
- 	u32			flags;
-+#ifdef CONFIG_SHORTCUT_FE
-+	unsigned long		cust_data;
-+#endif
- 
- #ifdef CONFIG_LOCKDEP
- 	struct lockdep_map	lockdep_map;
 --- a/net/Kconfig
 +++ b/net/Kconfig
 @@ -473,3 +473,6 @@ config HAVE_CBPF_JIT
