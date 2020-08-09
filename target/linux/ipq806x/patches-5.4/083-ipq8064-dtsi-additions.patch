@@ -26,7 +26,7 @@
  		};
  
  		cpu1: cpu@1 {
-@@ -38,11 +50,458 @@
+@@ -38,11 +50,462 @@
  			next-level-cache = <&L2>;
  			qcom,acc = <&acc1>;
  			qcom,saw = <&saw1>;
@@ -48,11 +48,15 @@
 +			qcom,saw = <&saw_l2>;
 +		};
 +
-+		qcom,l2 {
-+			qcom,l2-rates = <384000000 1000000000 1200000000>;
-+			qcom,l2-cpufreq = <384000000 600000000 1200000000>;
-+			qcom,l2-volt = <1100000 1100000 1150000>;
-+			qcom,l2-supply = <&smb208_s1a>;
++		qcom-krait-cache {
++			compatible = "qcom,krait-cache";
++			clocks = <&kraitcc 4>;
++			clock-names = "l2";
++			voltage-tolerance = <5>;
++			l2-rates = <384000000 1000000000 1200000000>;
++			l2-cpufreq = <384000 600000 1200000>;
++			l2-volt = <1100000 1100000 1150000>;
++			l2-supply = <&smb208_s1a>;
 +		};
 +
 +		idle-states {
