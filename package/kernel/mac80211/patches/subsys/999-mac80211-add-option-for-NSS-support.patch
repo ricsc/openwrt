@@ -210,14 +210,14 @@
 +			}
 +		}
 +		else {
-+			if (rx->napi)
-+				napi_gro_receive(rx->napi, skb);
++			if (rx->list)
++				list_add_tail(&skb->list, rx->list);
 +			else
 +				netif_receive_skb(skb);
 +		}
 +#else
- 		if (rx->napi)
- 			napi_gro_receive(rx->napi, skb);
+ 		if (rx->list)
+ 			list_add_tail(&skb->list, rx->list);
  		else
  			netif_receive_skb(skb);
 +#endif
@@ -237,14 +237,14 @@
 +		}
 +	}
 +	else {
-+		if (rx->napi)
-+			napi_gro_receive(rx->napi, skb);
++		if (rx->list)
++			list_add_tail(&skb->list, rx->list);
 +		else
 +			netif_receive_skb(skb);
 +	}
 +#else
- 	if (rx->napi)
- 		napi_gro_receive(rx->napi, skb);
+ 	if (rx->list)
+ 		list_add_tail(&skb->list, rx->list);
  	else
  		netif_receive_skb(skb);
 +#endif
