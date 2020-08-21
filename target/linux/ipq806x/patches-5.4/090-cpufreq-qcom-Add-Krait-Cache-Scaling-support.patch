@@ -1,7 +1,7 @@
-From e4b4e58ab9206e5f82a0181e472b667961ba524c Mon Sep 17 00:00:00 2001
+From a9b6626ced2195c618d9a8cb2af3dfe1a3df504a Mon Sep 17 00:00:00 2001
 From: Ansuel Smith <ansuelsmth@gmail.com>
 Date: Wed, 5 Aug 2020 14:19:23 +0200
-Subject: [RFC PATCH v2 1/2] cpufreq: qcom: Add Krait Cache Scaling support
+Subject: [RFC PATCH v3 1/2] cpufreq: qcom: Add Krait Cache Scaling support
 
 Qcom Krait CPUs use the generic cpufreq-dt driver and doesn't actually
 scale the Cache frequency when the CPU frequency is changed. This
@@ -15,8 +15,8 @@ Signed-off-by: Ansuel Smith <ansuelsmth@gmail.com>
 ---
  drivers/cpufreq/Kconfig.arm   |   9 ++
  drivers/cpufreq/Makefile      |   1 +
- drivers/cpufreq/krait-cache.c | 213 ++++++++++++++++++++++++++++++++++
- 3 files changed, 223 insertions(+)
+ drivers/cpufreq/krait-cache.c | 232 ++++++++++++++++++++++++++++++++++
+ 3 files changed, 242 insertions(+)
  create mode 100644 drivers/cpufreq/krait-cache.c
 
 diff --git a/drivers/cpufreq/Kconfig.arm b/drivers/cpufreq/Kconfig.arm
@@ -53,10 +53,10 @@ index f6670c4abbb0..eee53d7e8b09 100644
  obj-$(CONFIG_ARM_RASPBERRYPI_CPUFREQ) 	+= raspberrypi-cpufreq.o
 diff --git a/drivers/cpufreq/krait-cache.c b/drivers/cpufreq/krait-cache.c
 new file mode 100644
-index 000000000000..a2a14eb38dc0
+index 000000000000..0646fde9d920
 --- /dev/null
 +++ b/drivers/cpufreq/krait-cache.c
-@@ -0,0 +1,213 @@
+@@ -0,0 +1,232 @@
 +// SPDX-License-Identifier: GPL-2.0
 +
 +#include <linux/kernel.h>
@@ -68,32 +68,64 @@ index 000000000000..a2a14eb38dc0
 +#include <linux/clk.h>
 +#include <linux/slab.h>
 +#include <linux/regulator/consumer.h>
++#include <linux/pm_opp.h>
 +
 +struct krait_data {
-+	struct clk *l2_clk; /* L2 clock */
-+	unsigned int l2_volt_tol; /* L2 voltage tolerance */
++	struct device *dev;
 +
-+	struct regulator *l2_regulator; /* L2 supply */
-+	unsigned int l2_rate[3]; /* L2 bus clock rate */
-+
-+	unsigned int l2_cpufreq[3]; /* L2 target CPU frequency */
-+	unsigned int l2_volt[3]; /* L2 voltage array */
-+
-+	unsigned long curr_l2_freq;
-+	unsigned long curr_l2_volt;
++	unsigned int *l2_rates; /* L2 bus clock rate */
++	unsigned int *l2_cpufreq; /* L2 target CPU frequency */
 +
 +	struct notifier_block nb;
 +};
 +
++static int krait_cache_set_opp(struct dev_pm_set_opp_data *data)
++{
++	unsigned long old_freq = data->old_opp.rate, freq = data->new_opp.rate;
++	struct dev_pm_opp_supply *supply = &data->new_opp.supplies[0];
++	struct regulator *reg = data->regulators[0];
++	struct clk *clk = data->clk;
++	struct krait_data *kdata;
++	unsigned long idle_freq;
++	int ret;
++
++	kdata = (struct krait_data *)dev_get_drvdata(data->dev);
++
++	idle_freq = kdata->l2_rates[0];
++
++	ret = regulator_set_voltage_triplet(reg, supply->u_volt_min,
++					    supply->u_volt, supply->u_volt_max);
++	if (ret)
++		goto exit;
++
++	/*
++	 * Set to idle bin if switching from normal to high bin
++	 * or vice versa. It has been notice that a bug is triggered
++	 * in cache scaling when more than one bin is scaled, to fix
++	 * this we first need to transition to the base rate and then
++	 * to target rate
++	 */
++	if (likely(freq != idle_freq && old_freq != idle_freq)) {
++		ret = clk_set_rate(clk, idle_freq);
++		if (ret)
++			goto exit;
++	}
++
++	ret = clk_set_rate(clk, freq);
++	if (ret)
++		goto exit;
++
++exit:
++	return ret;
++}
++
 +static int krait_cache_notifier(struct notifier_block *nb, unsigned long cmd,
 +				void *v)
 +{
-+	unsigned int target_freq, cpu, cur_cpu, l2_index, tol;
-+	unsigned long curr_l2_freq, target_l2_freq;
-+	unsigned long curr_l2_vol, target_l2_volt;
++	unsigned int target_freq, cpu, cur_cpu;
++	unsigned int *freq_tbl, *freq_l2tbl;
 +	struct cpufreq_freqs *freqs;
 +	struct krait_data *data;
-+	struct clk *l2_clk;
 +	int ret = 0;
 +
 +	if (cmd == CPUFREQ_PRECHANGE) {
@@ -103,7 +135,8 @@ index 000000000000..a2a14eb38dc0
 +
 +		data = container_of(nb, struct krait_data, nb);
 +
-+		l2_clk = data->l2_clk;
++		freq_tbl = data->l2_cpufreq;
++		freq_l2tbl = data->l2_rates;
 +
 +		/* find the max freq across all core */
 +		for_each_present_cpu(cpu)
@@ -111,51 +144,12 @@ index 000000000000..a2a14eb38dc0
 +				target_freq = max(target_freq,
 +						  cpufreq_quick_get(cpu));
 +
-+		/* find l2_freq and l2_volt  */
-+		for (l2_index = 0;
-+		     l2_index < 2 && target_freq <= data->l2_cpufreq[l2_index];
-+		     l2_index++)
-+			break;
++		while (*(freq_tbl = freq_tbl + 1) && target_freq >= *freq_tbl)
++			freq_l2tbl = freq_l2tbl + 1;
 +
-+		curr_l2_freq = data->curr_l2_freq;
-+		target_l2_freq = data->l2_rate[l2_index];
-+
-+		/* scale only if needed */
-+		if (curr_l2_freq != target_l2_freq) {
-+			/*
-+			 * Set to idle bin if switching from normal to high bin
-+			 * or vice versa. It has been notice that a bug is triggered
-+			 * in cache scaling when more than one bin is scaled, to fix
-+			 * this we first need to transition to the base rate and then
-+			 * to target rate
-+			 */
-+			if (likely(l2_index > 0 &&
-+				   curr_l2_freq != data->l2_rate[0])) {
-+				ret = clk_set_rate(l2_clk, data->l2_rate[0]);
-+				if (ret)
-+					goto exit;
-+			}
-+
-+			ret = clk_set_rate(l2_clk, target_l2_freq);
-+			if (ret)
-+				goto exit;
-+
-+			data->curr_l2_freq = target_l2_freq;
-+
-+			curr_l2_vol = data->curr_l2_volt;
-+			target_l2_volt = data->l2_volt[l2_index];
-+
-+			if (curr_l2_vol != target_l2_volt) {
-+				tol = target_l2_volt * data->l2_volt_tol / 100;
-+				ret = regulator_set_voltage_tol(
-+					data->l2_regulator, target_l2_volt,
-+					tol);
-+				if (ret)
-+					goto exit;
-+
-+				data->curr_l2_volt = target_l2_volt;
-+			}
-+		}
++		ret = dev_pm_opp_set_rate(data->dev, *freq_l2tbl);
++		if (ret)
++			goto exit;
 +	}
 +
 +exit:
@@ -164,8 +158,11 @@ index 000000000000..a2a14eb38dc0
 +
 +static int krait_cache_probe(struct platform_device *pdev)
 +{
-+	int ret;
 +	struct clk *l2_clk;
++	int ret, i = 0, count;
++	unsigned long freq = 0;
++	struct dev_pm_opp *opp;
++	struct opp_table *table;
 +	struct device_node *vdd;
 +	struct krait_data *data;
 +	struct device *dev = &pdev->dev;
@@ -175,35 +172,11 @@ index 000000000000..a2a14eb38dc0
 +	if (!data)
 +		return -ENOMEM;
 +
-+	data->l2_clk = clk_get(dev, "l2");
++	data->dev = dev;
++
++	l2_clk = devm_clk_get(dev, "l2");
 +	if (IS_ERR(l2_clk)) {
 +		ret = PTR_ERR(l2_clk);
-+		goto exit;
-+	}
-+
-+	ret = of_property_read_u32(node, "voltage-tolerance",
-+				   &data->l2_volt_tol);
-+	if (ret) {
-+		dev_err(dev, "missing voltage tolerance\n");
-+		goto exit;
-+	}
-+
-+	ret = of_property_read_u32_array(node, "l2-rates", data->l2_rate, 3);
-+	if (ret) {
-+		dev_err(dev, "failed to parse L2 rates\n");
-+		goto exit;
-+	}
-+
-+	ret = of_property_read_u32_array(node, "l2-cpufreq", data->l2_cpufreq,
-+					 3);
-+	if (ret) {
-+		dev_err(dev, "failed to parse L2 cpufreq range\n");
-+		goto exit;
-+	}
-+
-+	ret = of_property_read_u32_array(node, "l2-volt", data->l2_volt, 3);
-+	if (ret) {
-+		dev_err(dev, "failed to parse L2 volt range\n");
 +		goto exit;
 +	}
 +
@@ -214,12 +187,57 @@ index 000000000000..a2a14eb38dc0
 +		goto exit;
 +	}
 +
-+	data->l2_regulator = devm_regulator_get(dev, vdd->name);
-+	if (IS_ERR(data->l2_regulator)) {
-+		dev_err(dev, "failed to get l2 supply, error=%pe\n",
-+			data->l2_regulator);
-+		ret = PTR_ERR(data->l2_regulator);
++	table = dev_pm_opp_set_regulators(dev, (const char *[]){ vdd->name },
++					  1);
++	if (IS_ERR(table)) {
++		ret = PTR_ERR(table);
++		dev_err(dev, "failed to set regulators %d\n", ret);
 +		goto exit_vdd;
++	}
++
++	dev_pm_opp_put(opp);
++
++	ret = PTR_ERR_OR_ZERO(
++		dev_pm_opp_register_set_opp_helper(dev, krait_cache_set_opp));
++	if (ret)
++		goto exit_vdd;
++
++	ret = dev_pm_opp_of_add_table(dev);
++	if (ret) {
++		dev_err(dev, "failed to parse L2 freq thresholds\n");
++		goto exit_vdd;
++	}
++
++	count = dev_pm_opp_get_opp_count(dev);
++
++	data->l2_cpufreq =
++		devm_kzalloc(dev, sizeof(unsigned int) * count, GFP_KERNEL);
++	if (!data->l2_cpufreq) {
++		ret = -ENOMEM;
++		goto exit_vdd;
++	}
++
++	ret = of_property_read_u32_array(node, "l2-cpufreq", data->l2_cpufreq,
++					 count);
++	if (ret) {
++		dev_err(dev, "failed to parse L2 cpufreq thresholds\n");
++		goto exit_vdd;
++	}
++
++	/* Allocate space for opp_count + 1, the last index is used as sentinel */
++	data->l2_rates =
++		devm_kzalloc(dev, sizeof(unsigned int) * count + 1, GFP_KERNEL);
++	if (!data->l2_rates) {
++		ret = -ENOMEM;
++		goto exit_vdd;
++	}
++
++	/* populate the table in increasing order */
++	while (!IS_ERR(opp = dev_pm_opp_find_freq_ceil(dev, &freq))) {
++		data->l2_rates[i] = freq;
++		freq++;
++		i++;
++		dev_pm_opp_put(opp);
 +	}
 +
 +	platform_set_drvdata(pdev, data);
@@ -237,6 +255,7 @@ index 000000000000..a2a14eb38dc0
 +{
 +	struct krait_data *data = platform_get_drvdata(pdev);
 +
++	dev_pm_opp_remove_table(data->dev);
 +	cpufreq_unregister_notifier(&data->nb, CPUFREQ_TRANSITION_NOTIFIER);
 +
 +	return 0;

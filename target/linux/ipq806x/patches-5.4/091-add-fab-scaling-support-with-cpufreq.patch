@@ -12,9 +12,9 @@
  	struct clk *l2_clk; /* L2 clock */
  	unsigned int l2_volt_tol; /* L2 voltage tolerance */
 @@ -97,6 +101,15 @@ static int krait_cache_notifier(struct notifier_block *nb, unsigned long cmd,
- 				data->curr_l2_volt = target_l2_volt;
- 			}
- 		}
+ 		ret = dev_pm_opp_set_rate(data->dev, *freq_l2tbl);
+ 		if (ret)
+ 			goto exit;
 +
 +#ifdef CONFIG_QCOM_FAB_SCALING
 +		/*
