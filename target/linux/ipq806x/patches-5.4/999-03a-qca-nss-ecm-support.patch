@@ -726,9 +726,9 @@
  
  void bond_setup(struct net_device *bond_dev)
 @@ -4872,6 +4939,16 @@ int bond_create(struct net *net, const c
+ 	bond_work_init_all(bond);
+ 
  	rtnl_unlock();
- 	if (res < 0)
- 		free_netdev(bond_dev);
 +
 +	/* QCA NSS ECM Support - Start */
 +	bond = netdev_priv(bond_dev);
@@ -739,7 +739,7 @@
 +	}
 +	/* QCA NSS ECM Support - End */
 +
- 	return res;
+ 	return 0;
  }
  
 @@ -4967,6 +5028,203 @@ static void __exit bonding_exit(void)
