@@ -56,7 +56,7 @@ new file mode 100644
 index 000000000000..0646fde9d920
 --- /dev/null
 +++ b/drivers/cpufreq/krait-cache.c
-@@ -0,0 +1,232 @@
+@@ -0,0 +1,230 @@
 +// SPDX-License-Identifier: GPL-2.0
 +
 +#include <linux/kernel.h>
@@ -194,8 +194,6 @@ index 000000000000..0646fde9d920
 +		dev_err(dev, "failed to set regulators %d\n", ret);
 +		goto exit_vdd;
 +	}
-+
-+	dev_pm_opp_put(opp);
 +
 +	ret = PTR_ERR_OR_ZERO(
 +		dev_pm_opp_register_set_opp_helper(dev, krait_cache_set_opp));
