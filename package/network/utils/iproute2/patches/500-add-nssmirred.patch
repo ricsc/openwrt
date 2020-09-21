@@ -1,9 +1,9 @@
 --- a/tc/Makefile	2019-04-08 12:48:15.425854828 +0530
 +++ b/tc/Makefile	2019-04-08 13:03:17.204741000 +0530
 @@ -54,6 +54,7 @@ TCMODULES += m_bpf.o
- TCMODULES += m_tunnel_key.o
  TCMODULES += m_sample.o
  TCMODULES += m_ct.o
+ TCMODULES += m_gate.o
 +TCMODULES += m_nssmirred.o
  TCMODULES += p_ip.o
  TCMODULES += p_ip6.o
