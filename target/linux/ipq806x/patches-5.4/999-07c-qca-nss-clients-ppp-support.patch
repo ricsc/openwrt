@@ -1,99 +1,113 @@
---- a/include/linux/ppp_channel.h
-+++ b/include/linux/ppp_channel.h
-@@ -146,5 +146,17 @@ extern void ppp_update_stats(struct net_
- extern int ppp_dev_index(struct ppp_channel *);
- /* QCA NSS ECM Support - End */
- 
-+/* QCA NSS Clients Support - Start */
-+/* PPP channel connection event types */
-+#define PPP_CHANNEL_DISCONNECT	0
-+#define PPP_CHANNEL_CONNECT	1
-+
-+/* Register the PPP channel connect notifier */
-+extern void ppp_channel_connection_register_notify(struct notifier_block *nb);
-+
-+/* Unregister the PPP channel connect notifier */
-+extern void ppp_channel_connection_unregister_notify(struct notifier_block *nb);
-+/* QCA NSS Clients Support - End */
-+
- #endif /* __KERNEL__ */
- #endif
 --- a/drivers/net/ppp/ppp_generic.c
 +++ b/drivers/net/ppp/ppp_generic.c
-@@ -256,6 +256,26 @@ struct ppp_net {
- #define seq_before(a, b)	((s32)((a) - (b)) < 0)
- #define seq_after(a, b)		((s32)((a) - (b)) > 0)
+@@ -48,6 +48,7 @@
+ #include <net/slhc_vj.h>
+ #include <linux/atomic.h>
+ #include <linux/refcount.h>
++#include <linux/if_pppox.h>
  
-+/* QCA NSS Client Support - Start */
-+/*
-+ * Registration/Unregistration methods
-+ * for PPP channel connect and disconnect event notifications.
-+ */
-+RAW_NOTIFIER_HEAD(ppp_channel_connection_notifier_list);
-+
-+void ppp_channel_connection_register_notify(struct notifier_block *nb)
-+{
-+	raw_notifier_chain_register(&ppp_channel_connection_notifier_list, nb);
-+}
-+EXPORT_SYMBOL_GPL(ppp_channel_connection_register_notify);
-+
-+void ppp_channel_connection_unregister_notify(struct notifier_block *nb)
-+{
-+	raw_notifier_chain_unregister(&ppp_channel_connection_notifier_list, nb);
-+}
-+EXPORT_SYMBOL_GPL(ppp_channel_connection_unregister_notify);
-+/* QCA NSS Client Support - End */
-+
- /* Prototypes. */
- static int ppp_unattached_ioctl(struct net *net, struct ppp_file *pf,
- 			struct file *file, unsigned int cmd, unsigned long arg);
-@@ -3212,6 +3232,7 @@ ppp_connect_channel(struct channel *pch,
- 	int ppp_proto;
- 	int version;
- 	/* QCA NSS ECM Support - End */
-+	int notify = 0; /* QCA NSS Client Support */
+ #include <linux/nsproxy.h>
+ #include <net/net_namespace.h>
+@@ -3207,6 +3208,10 @@ ppp_connect_channel(struct channel *pch,
+ 	struct ppp_net *pn;
+ 	int ret = -ENXIO;
+ 	int hdrlen;
++	/* QCA NSS ECM Support - Start */
++	int ppp_proto;
++	int version;
++	/* QCA NSS ECM Support - End */
  
  	pn = ppp_pernet(pch->chan_net);
  
-@@ -3262,6 +3283,8 @@ ppp_connect_channel(struct channel *pch,
- 			ppp->dev->priv_flags_qca_ecm |= IFF_QCA_ECM_PPP_L2TPV3;
- 	}
- 	/* QCA NSS ECM support - End */
+@@ -3238,6 +3243,26 @@ ppp_connect_channel(struct channel *pch,
+ 	++ppp->n_channels;
+ 	pch->ppp = ppp;
+ 	refcount_inc(&ppp->file.refcnt);
 +
-+	notify = 1; /* QCA NSS Clients Support */
-  out2:
++	/* QCA NSS ECM support - Start */
++	/* Set the netdev priv flag if the prototype
++	 * is L2TP or PPTP. Return success in all cases
++	 */
++	if (!pch->chan)
++		goto out2;
++
++	ppp_proto = ppp_channel_get_protocol(pch->chan);
++	if (ppp_proto == PX_PROTO_PPTP) {
++		ppp->dev->priv_flags_qca_ecm |= IFF_QCA_ECM_PPP_PPTP;
++	} else if (ppp_proto == PX_PROTO_OL2TP) {
++		version = ppp_channel_get_proto_version(pch->chan);
++		if (version == 2)
++			ppp->dev->priv_flags_qca_ecm |= IFF_QCA_ECM_PPP_L2TPV2;
++		else if (version == 3)
++			ppp->dev->priv_flags_qca_ecm |= IFF_QCA_ECM_PPP_L2TPV3;
++	}
++	/* QCA NSS ECM support - End */
++ out2:
  	ppp_unlock(ppp);
  	ret = 0;
-@@ -3270,6 +3293,16 @@ ppp_connect_channel(struct channel *pch,
- 	write_unlock_bh(&pch->upl);
-  out:
- 	mutex_unlock(&pn->all_ppp_mutex);
-+
-+	/* QCA NSS Clients Support - Start */
-+	if (notify && ppp && ppp->dev) {
-+		dev_hold(ppp->dev);
-+		raw_notifier_call_chain(&ppp_channel_connection_notifier_list,
-+					   PPP_CHANNEL_CONNECT, ppp->dev);
-+		dev_put(ppp->dev);
-+	}
-+	/* QCA NSS Clients Support - End */
-+
- 	return ret;
- }
  
-@@ -3287,6 +3320,15 @@ ppp_disconnect_channel(struct channel *p
- 	pch->ppp = NULL;
- 	write_unlock_bh(&pch->upl);
- 	if (ppp) {
-+		/* QCA NSS Clients Support - Start */
-+		if (ppp->dev) {
-+			dev_hold(ppp->dev);
-+			raw_notifier_call_chain(&ppp_channel_connection_notifier_list,
-+					   PPP_CHANNEL_DISCONNECT, ppp->dev);
-+			dev_put(ppp->dev);
-+		}
-+		/* QCA NSS Clients Support - Start */
+@@ -3341,6 +3366,40 @@
+ }
+ EXPORT_SYMBOL(ppp_release_channels);
+ 
++/* ppp_channel_get_proto_version()
++ *	Call this to get channel protocol version
++ */
++int ppp_channel_get_proto_version(struct ppp_channel *chan)
++{
++	if (!chan->ops->get_channel_protocol_ver)
++		return -1;
 +
- 		/* remove it from the ppp unit's list */
- 		ppp_lock(ppp);
- 		list_del(&pch->clist);
++	return chan->ops->get_channel_protocol_ver(chan);
++}
++EXPORT_SYMBOL(ppp_channel_get_proto_version);
++
++/* Check if ppp xmit lock is on hold */
++bool ppp_is_xmit_locked(struct net_device *dev)
++{
++	struct ppp *ppp;
++
++	if (!dev)
++		return false;
++
++	if (dev->type != ARPHRD_PPP)
++		return false;
++
++	ppp = netdev_priv(dev);
++	if (!ppp)
++		return false;
++
++	if (spin_is_locked(&(ppp)->wlock))
++		return true;
++
++	return false;
++}
++EXPORT_SYMBOL(ppp_is_xmit_locked);
++
+ /* Module/initialization stuff */
+ 
+ module_init(ppp_init);
+--- a/include/linux/ppp_channel.h
++++ b/include/linux/ppp_channel.h
+@@ -32,6 +32,8 @@ struct ppp_channel_ops {
+ 	 * the channel subtype
+ 	 */
+ 	int (*get_channel_protocol)(struct ppp_channel *);
++	/* Get channel protocol version */
++	int (*get_channel_protocol_ver)(struct ppp_channel *);
+	/* Hold the channel from being destroyed */
+	void (*hold)(struct ppp_channel *);
+	/* Release hold on the channel */
+@@ -84,6 +96,12 @@
+ /* Test if ppp xmit lock is locked */
+ extern bool ppp_is_xmit_locked(struct net_device *dev);
+ 
++/* Test if ppp xmit lock is locked */
++extern bool ppp_is_xmit_locked(struct net_device *dev);
++
++/* Call this get protocol version */
++extern int ppp_channel_get_proto_version(struct ppp_channel *);
++
+ /* Hold PPP channels for the PPP device */
+ extern int __ppp_hold_channels(struct net_device *dev,
+ 			       struct ppp_channel *channels[],
