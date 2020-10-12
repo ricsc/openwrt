@@ -105,7 +105,7 @@
  module_init(ppp_init);
 --- a/include/linux/ppp_channel.h
 +++ b/include/linux/ppp_channel.h
-@@ -32,6 +32,11 @@ struct ppp_channel_ops {
+@@ -32,6 +32,8 @@ struct ppp_channel_ops {
  	 * the channel subtype
  	 */
  	int (*get_channel_protocol)(struct ppp_channel *);
@@ -114,7 +114,7 @@
 	/* Hold the channel from being destroyed */
 	void (*hold)(struct ppp_channel *);
 	/* Release hold on the channel */
-@@ -84,6 +96,12 @@
+@@ -84,6 +96,15 @@
  /* Test if ppp xmit lock is locked */
  extern bool ppp_is_xmit_locked(struct net_device *dev);
  
