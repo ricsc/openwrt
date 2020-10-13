@@ -110,7 +110,7 @@ index a3b403ba8..019bea284 100644
  
 +	nosupp_sg = crypto_tfm_alg_type(&aead->base) & CRYPTO_ALG_NOSUPP_SG;
 +	if (nosupp_sg && skb_linearize(skb)) {
-+		err = -ENOMEM;
++		ret = -ENOMEM;
 +		goto out;
 +	}
 +
