@@ -153,21 +153,6 @@
  	}
  }
  
-@@ -2640,8 +2718,12 @@ ieee80211_deliver_skb(struct ieee80211_rx_data *rx)
- 		}
- 	}
- 
--#ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
--	if (skb) {
-+#if !defined(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS) || defined(CPTCFG_MAC80211_NSS_SUPPORT)
-+	if (skb
-+#if CPTCFG_MAC80211_NSS_SUPPORT
-+	    && sdata->nssctx
-+#endif
-+	) {
- 		/* 'align' will only take the values 0 or 2 here since all
- 		 * frames are required to be aligned to 2-byte boundaries
- 		 * when being passed to mac80211; the code here works just
 @@ -4469,10 +4551,17 @@ static bool ieee80211_invoke_fast_rx(struct ieee80211_rx_data *rx,
  	/* deliver to local stack */
  	skb->protocol = eth_type_trans(skb, fast_rx->dev);
