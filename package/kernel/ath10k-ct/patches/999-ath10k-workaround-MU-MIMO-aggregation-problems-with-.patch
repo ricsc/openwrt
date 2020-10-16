@@ -1,0 +1,27 @@
+--- a/ath10k-5.4/mac.c
++++ b/ath10k-5.4/mac.c
+@@ -3277,6 +3277,24 @@ ath10k_mac_tx_h_get_txmode(struct ath10k
+ 	if (test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags))
+ 		return ATH10K_HW_TXRX_RAW;
+ 
++	/* Workaround:
++	 *
++	 * Since 10.4.3 (at least confirmed with 10.4.3-00191) for QCA99X0
++	 * MU-MIMO aggregation is broken with NativeWifi tx mode resulting in
++	 * poor performance. It is thought this is related to peer-flow-ctrl
++	 * feature. To make it work Ethernet tx mode is required.  Ethernet
++	 * can't carry 4addr information and the necessary prerequisites aren't
++	 * in place so these frames are excluded - it's more important to have
++	 * it working than working fast.
++	 */
++	if (QCA_REV_99X0(ar)) {
++		if (test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL,
++		    ar->running_fw->fw_file.fw_features) &&
++		    ieee80211_is_data_present(fc) &&
++		    !ieee80211_has_a4(fc) && !ieee80211_vif_is_mesh(vif))
++			return ATH10K_HW_TXRX_ETHERNET;
++	}
++
+ 	return ATH10K_HW_TXRX_NATIVE_WIFI;
+ }
+ 
