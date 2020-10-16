@@ -1,0 +1,268 @@
+--- a/ath10k-5.4/core.c
++++ b/ath10k-5.4/core.c
+@@ -39,6 +39,7 @@ static bool uart_print;
+ static bool skip_otp;
+ static bool rawmode;
+ static bool fw_diag_log;
++static bool ethernet_mode = true;
+ 
+ unsigned long ath10k_coredump_mask = BIT(ATH10K_FW_CRASH_DUMP_REGISTERS) |
+ 				     BIT(ATH10K_FW_CRASH_DUMP_CE_DATA);
+@@ -56,6 +57,7 @@ module_param(skip_otp, bool, 0644);
+ module_param(rawmode, bool, 0644);
+ module_param(fw_diag_log, bool, 0644);
+ module_param_named(coredump_mask, ath10k_coredump_mask, ulong, 0444);
++module_param(ethernet_mode, bool, 0644);
+ 
+ MODULE_PARM_DESC(debug_mask, "Debugging mask");
+ MODULE_PARM_DESC(uart_print, "Uart target debugging");
+@@ -64,6 +66,7 @@ MODULE_PARM_DESC(cryptmode, "Crypto mode: 0-hardware, 1-software");
+ MODULE_PARM_DESC(rawmode, "Use raw 802.11 frame datapath");
+ MODULE_PARM_DESC(coredump_mask, "Bitfield of what to include in firmware crash file");
+ MODULE_PARM_DESC(fw_diag_log, "Diag based fw log debugging");
++MODULE_PARM_DESC(ethernet_mode, "Use ethernet frame datapath");
+ 
+ static const struct ath10k_hw_params ath10k_hw_params_list[] = {
+ 	{
+@@ -3860,6 +3863,14 @@ static void ath10k_core_register_work(struct work_struct *work)
+ 	/* peer stats are enabled by default */
+ 	set_bit(ATH10K_FLAG_PEER_STATS, &ar->dev_flags);
+ 
++	if (ethernet_mode && rawmode) {
++		ath10k_err(ar, "invalid configuration, ethernet and rawmode data path can not coexist\n");
++		status = -EINVAL;
++		goto err;
++	}
++
++	ar->ethernet_mode = ethernet_mode;
++
+ 	status = ath10k_core_probe_fw(ar);
+ 	if (status) {
+ 		ath10k_err(ar, "could not probe fw (%d)\n", status);
+--- a/ath10k-5.4/core.h
++++ b/ath10k-5.4/core.h
+@@ -119,6 +119,7 @@ enum ath10k_skb_flags {
+ 	ATH10K_SKB_F_MGMT = BIT(3),
+ 	ATH10K_SKB_F_QOS = BIT(4),
+ 	ATH10K_SKB_F_RAW_TX = BIT(5),
++	ATH10K_SKB_F_NO_80211_ENCAP = BIT(6),
+ };
+ 
+ struct ath10k_skb_cb {
+@@ -1581,6 +1582,8 @@ struct ath10k {
+ 	const char *led_default_trigger;
+ #endif
+ 
++	bool ethernet_mode;
++
+ 	/* must be last */
+ 	u8 drv_priv[0] __aligned(sizeof(void *));
+ };
+--- a/ath10k-5.4/htt_tx.c
++++ b/ath10k-5.4/htt_tx.c
+@@ -816,6 +816,10 @@ static u8 ath10k_htt_tx_get_tid(struct s
+ 	struct ieee80211_hdr *hdr = (void *)skb->data;
+ 	struct ath10k_skb_cb *cb = ATH10K_SKB_CB(skb);
+ 
++	/* Firmware takes care of tid classification for ethernet format */
++	if (cb->flags & ATH10K_SKB_F_NO_80211_ENCAP)
++		return HTT_DATA_TX_EXT_TID_INVALID;
++
+ 	if (!is_eth && ieee80211_is_mgmt(hdr->frame_control))
+ 		return HTT_DATA_TX_EXT_TID_MGMT;
+ 	else if (cb->flags & ATH10K_SKB_F_QOS)
+@@ -937,15 +941,17 @@ int ath10k_htt_tx(struct ath10k_htt *htt
+ 	txbuf_paddr = htt->txbuf.paddr +
+ 		      (sizeof(struct ath10k_htt_txbuf) * msdu_id);
+ 
+-	if ((ieee80211_is_action(hdr->frame_control) ||
+-	     ieee80211_is_deauth(hdr->frame_control) ||
+-	     ieee80211_is_disassoc(hdr->frame_control)) &&
+-	     ieee80211_has_protected(hdr->frame_control)) {
+-		skb_put(msdu, IEEE80211_CCMP_MIC_LEN);
+-	} else if (!(skb_cb->flags & ATH10K_SKB_F_NO_HWCRYPT) &&
+-		   txmode == ATH10K_HW_TXRX_RAW &&
+-		   ieee80211_has_protected(hdr->frame_control)) {
+-		skb_put(msdu, IEEE80211_CCMP_MIC_LEN);
++	if (!ieee80211_hw_check(ar->hw, SUPPORTS_TX_ENCAP_OFFLOAD)) {
++		if ((ieee80211_is_action(hdr->frame_control) ||
++		    ieee80211_is_deauth(hdr->frame_control) ||
++		    ieee80211_is_disassoc(hdr->frame_control)) &&
++		    ieee80211_has_protected(hdr->frame_control)) {
++			skb_put(msdu, IEEE80211_CCMP_MIC_LEN);
++		} else if (!(skb_cb->flags & ATH10K_SKB_F_NO_HWCRYPT) &&
++			   txmode == ATH10K_HW_TXRX_RAW &&
++			   ieee80211_has_protected(hdr->frame_control)) {
++			skb_put(msdu, IEEE80211_CCMP_MIC_LEN);
++		}
+ 	}
+ 
+ 	skb_cb->paddr = dma_map_single(dev, msdu->data, msdu->len,
+--- a/ath10k-5.4/mac.c
++++ b/ath10k-5.4/mac.c
+@@ -4164,6 +4164,9 @@ ath10k_mac_tx_h_get_txmode(struct ath10k *ar,
+ {
+ 	if (!vif || vif->type == NL80211_IFTYPE_MONITOR)
+ 		return ATH10K_HW_TXRX_RAW;
+ 
++	if (ieee80211_hw_check(ar->hw, SUPPORTS_TX_ENCAP_OFFLOAD))
++		return ATH10K_HW_TXRX_ETHERNET;
++
+ 	/* CT Firmware with HTT-TX support sends all frames, including
+ 	 * management frames, over HTT in NATIVE-WIFI format.
+ 	 */
+@@ -4343,6 +4347,14 @@ static void ath10k_mac_tx_h_fill_cb(struct ath10k *ar,
+ 			ieee80211_is_data_qos(hdr->frame_control);
+ 
+ 	cb->flags = 0;
++	cb->vif = vif;
++	cb->txq = txq;
++
++	if (ieee80211_hw_check(ar->hw, SUPPORTS_TX_ENCAP_OFFLOAD)) {
++		cb->flags |= ATH10K_SKB_F_NO_80211_ENCAP;
++		return;
++	}
++
+ 	if (!ath10k_tx_h_use_hwcrypto(vif, skb))
+ 		cb->flags |= ATH10K_SKB_F_NO_HWCRYPT;
+ 
+@@ -4362,8 +4374,6 @@ static void ath10k_mac_tx_h_fill_cb(struct ath10k *ar,
+ 		cb->flags |= ATH10K_SKB_F_RAW_TX;
+ 	}
+ 
+-	cb->vif = vif;
+-	cb->txq = txq;
+ 	cb->airtime_est = airtime;
+ }
+ 
+@@ -4477,6 +4487,9 @@ static int ath10k_mac_tx(struct ath10k *ar,
+ 	const struct ath10k_skb_cb *skb_cb = ATH10K_SKB_CB(skb);
+ 	int ret;
+ 
++	if (ieee80211_hw_check(ar->hw, SUPPORTS_TX_ENCAP_OFFLOAD))
++		goto skip_encap;
++
+ 	/* We should disable CCK RATE due to P2P */
+ 	if (info->flags & IEEE80211_TX_CTL_NO_CCK_RATE)
+ 		ath10k_dbg(ar, ATH10K_DBG_MAC, "IEEE80211_TX_CTL_NO_CCK_RATE\n");
+@@ -4505,6 +4518,7 @@ static int ath10k_mac_tx(struct ath10k *ar,
+ 		}
+ 	}
+ 
++skip_encap:
+ 	if (!noque_offchan && info->flags & IEEE80211_TX_CTL_TX_OFFCHAN) {
+ 		if (!ath10k_mac_tx_frm_has_freq(ar)) {
+ 			ath10k_dbg(ar, ATH10K_DBG_MAC, "mac queued offchannel skb %pK len %d\n",
+@@ -4554,6 +4568,7 @@ void ath10k_offchan_tx_work(struct work_struct *work)
+ 	int ret;
+ 	unsigned long time_left;
+ 	bool tmp_peer_created = false;
++	struct ieee80211_tx_info *info;
+ 
+ 	/* FW requirement: We must create a peer before FW will send out
+ 	 * an offchannel frame. Otherwise the frame will be stuck and
+@@ -4573,8 +4588,14 @@ void ath10k_offchan_tx_work(struct work_struct *work)
+ 		ath10k_dbg(ar, ATH10K_DBG_MAC, "mac offchannel skb %pK len %d\n",
+ 			   skb, skb->len);
+ 
+-		hdr = (struct ieee80211_hdr *)skb->data;
+-		peer_addr = ieee80211_get_DA(hdr);
++		info = IEEE80211_SKB_CB(skb);
++
++		if (ieee80211_hw_check(ar->hw, SUPPORTS_TX_ENCAP_OFFLOAD)) {
++			peer_addr = skb->data;
++		} else {
++			hdr = (struct ieee80211_hdr *)skb->data;
++			peer_addr = ieee80211_get_DA(hdr);
++		}
+ 
+ 		spin_lock_bh(&ar->data_lock);
+ 		vdev_id = ar->scan.vdev_id;
+@@ -5213,7 +5234,7 @@ static void ath10k_mac_op_tx(struct ieee80211_hw *hw,
+ 	struct ieee80211_vif *vif = info->control.vif;
+ 	struct ieee80211_sta *sta = control->sta;
+ 	struct ieee80211_txq *txq = NULL;
+-	struct ieee80211_hdr *hdr = (void *)skb->data;
++	struct ieee80211_hdr *hdr;
+ 	enum ath10k_hw_txrx_mode txmode;
+ 	enum ath10k_mac_tx_path txpath;
+ 	bool is_htt;
+@@ -5227,6 +5248,7 @@ static void ath10k_mac_op_tx(struct ieee80211_hw *hw,
+ 
+ 	txmode = ath10k_mac_tx_h_get_txmode(ar, vif, sta, skb);
+ 	txpath = ath10k_mac_tx_h_get_txpath(ar, skb, txmode);
++
+ 	is_htt = (txpath == ATH10K_MAC_TX_HTT ||
+ 		  txpath == ATH10K_MAC_TX_HTT_MGMT);
+ 	is_mgmt = (txpath == ATH10K_MAC_TX_HTT_MGMT);
+@@ -5239,7 +5261,6 @@ static void ath10k_mac_op_tx(struct ieee80211_hw *hw,
+ 
+ 	if (is_htt) {
+ 		spin_lock_bh(&ar->htt.tx_lock);
+-		is_presp = ieee80211_is_probe_resp(hdr->frame_control);
+ 
+ 		ret = ath10k_htt_tx_inc_pending(htt);
+ 		if (ret) {
+@@ -5250,14 +5271,19 @@ static void ath10k_mac_op_tx(struct ieee80211_hw *hw,
+ 			return;
+ 		}
+ 
+-		ret = ath10k_htt_tx_mgmt_inc_pending(htt, is_mgmt, is_presp);
+-		if (ret) {
+-			ath10k_dbg(ar, ATH10K_DBG_MAC, "failed to increase tx mgmt pending count: %d, dropping\n",
+-				   ret);
+-			ath10k_htt_tx_dec_pending(htt);
+-			spin_unlock_bh(&ar->htt.tx_lock);
+-			ieee80211_free_txskb(ar->hw, skb);
+-			return;
++		if (is_mgmt) {
++			hdr = (struct ieee80211_hdr *)skb->data;
++			is_presp = ieee80211_is_probe_resp(hdr->frame_control);
++
++			ret = ath10k_htt_tx_mgmt_inc_pending(htt, is_mgmt, is_presp);
++			if (ret) {
++				ath10k_dbg(ar, ATH10K_DBG_MAC, "failed to increase tx mgmt pending count: %d, dropping\n",
++					   ret);
++				ath10k_htt_tx_dec_pending(htt);
++				spin_unlock_bh(&ar->htt.tx_lock);
++				ieee80211_free_txskb(ar->hw, skb);
++				return;
++			}
+ 		}
+ 		spin_unlock_bh(&ar->htt.tx_lock);
+ 	}
+@@ -10095,7 +10121,6 @@ int ath10k_mac_register(struct ath10k *ar)
+ 	ieee80211_hw_set(ar->hw, HAS_RATE_CONTROL);
+ 	ieee80211_hw_set(ar->hw, AP_LINK_PS);
+ 	ieee80211_hw_set(ar->hw, SPECTRUM_MGMT);
+-	ieee80211_hw_set(ar->hw, SUPPORT_FAST_XMIT);
+ 	if (ar->bmiss_offload_max_vdev > 0)
+ 		ieee80211_hw_set(ar->hw, CONNECTION_MONITOR);
+ 	ieee80211_hw_set(ar->hw, SUPPORTS_PER_STA_GTK);
+@@ -10105,6 +10130,11 @@ int ath10k_mac_register(struct ath10k *ar)
+ 	ieee80211_hw_set(ar->hw, SUPPORTS_TX_FRAG);
+ 	ieee80211_hw_set(ar->hw, REPORTS_LOW_ACK);
+ 
++	if (ar->ethernet_mode)
++		ieee80211_hw_set(ar->hw, SUPPORTS_TX_ENCAP_OFFLOAD);
++	else
++		ieee80211_hw_set(ar->hw, SUPPORT_FAST_XMIT);
++
+ 	if (!test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags))
+ 		ieee80211_hw_set(ar->hw, SW_CRYPTO_CONTROL);
+ 
+--- a/ath10k-5.4/txrx.c
++++ b/ath10k-5.4/txrx.c
+@@ -120,7 +120,11 @@ int ath10k_txrx_tx_unref(struct ath10k_h
+ 	    (info->flags & IEEE80211_TX_CTL_NO_ACK))
+ 		info->flags |= IEEE80211_TX_STAT_NOACK_TRANSMITTED;
+ 
+-	ieee80211_tx_status(htt->ar->hw, msdu);
++	if (skb_cb->flags & ATH10K_SKB_F_NO_80211_ENCAP)
++		ieee80211_tx_status_8023(htt->ar->hw, skb_cb->vif, msdu);
++	else
++		ieee80211_tx_status(htt->ar->hw, msdu);
++
+ 	/* we do not own the msdu anymore */
+ 
+ 	return 0;
