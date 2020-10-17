@@ -1,5 +1,5 @@
---- a/ath10k-5.4/mac.c
-+++ b/ath10k-5.4/mac.c
+--- a/drivers/net/wireless/ath/ath10k/mac.c
++++ b/drivers/net/wireless/ath/ath10k/mac.c
 @@ -3277,6 +3277,24 @@ ath10k_mac_tx_h_get_txmode(struct ath10k
  	if (test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags))
  		return ATH10K_HW_TXRX_RAW;
