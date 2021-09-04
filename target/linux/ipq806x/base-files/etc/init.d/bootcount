@@ -17,4 +17,7 @@ boot() {
 		mtd resetbc s_env || true
 		;;
 	esac
+	
+	sysctl -w vm.min_free_kbytes=65536
+	sysctl -w net.netfilter.nf_conntrack_max=32768
 }
