@@ -13,11 +13,11 @@
 		gmac0: ethernet@37000000 {
 			device_type = "network";
 			compatible = "qcom,ipq806x-gmac", "snps,dwmac";
-@@ -1431,7 +1437,61 @@
+@@ -1430,6 +1436,62 @@
+ 			regulator-max-microvolt = <3300000>;
  			regulator-always-on;
  		};
- 
--		sdcc1bam:dma@12402000 {
++ 
 +		nss0: nss@40000000 {
 +			compatible = "qcom,nss";
 +			qcom,low-frequency = <733000000>; /* orig value 110000000 */
@@ -73,11 +73,10 @@
 +			qcom,clmap-enabled;
 +		};
 +
-+		sdcc1bam: dma@12402000 {
+
+		sdcc1bam: dma@12402000 {
  			compatible = "qcom,bam-v1.3.0";
- 			reg = <0x12402000 0x8000>;
- 			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
-@@ -1497,6 +1564,20 @@
+@@ -1497,6 +1559,20 @@
  				dma-names = "tx", "rx";
  			};
  		};
