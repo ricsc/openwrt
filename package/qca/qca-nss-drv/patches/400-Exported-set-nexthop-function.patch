@@ -9,8 +9,6 @@ Signed-off-by: Suruchi Suman <surusuma@codeaurora.org>
  nss_phys_if.c | 9 ++++++++-
  1 file changed, 8 insertions(+), 1 deletion(-)
 
-diff --git a/nss_phys_if.c b/nss_phys_if.c
-index 4f9b20f..0c58d95 100644
 --- a/nss_phys_if.c
 +++ b/nss_phys_if.c
 @@ -1,6 +1,6 @@
@@ -21,7 +19,7 @@ index 4f9b20f..0c58d95 100644
   * Permission to use, copy, modify, and/or distribute this software for
   * any purpose with or without fee is hereby granted, provided that the
   * above copyright notice and this permission notice appear in all copies.
-@@ -583,6 +583,12 @@ nss_tx_status_t nss_phys_if_set_nexthop(struct nss_ctx_instance *nss_ctx, uint32
+@@ -583,6 +583,12 @@ nss_tx_status_t nss_phys_if_set_nexthop(
  	struct nss_phys_if_msg nim;
  
  	NSS_VERIFY_CTX_MAGIC(nss_ctx);
@@ -34,7 +32,7 @@ index 4f9b20f..0c58d95 100644
  	nss_info("%p: Phys If nexthop will be set to %d, id:%d\n", nss_ctx, nexthop, if_num);
  
  	nss_cmn_msg_init(&nim.cm, if_num, NSS_PHYS_IF_SET_NEXTHOP,
-@@ -591,6 +597,7 @@ nss_tx_status_t nss_phys_if_set_nexthop(struct nss_ctx_instance *nss_ctx, uint32
+@@ -591,6 +597,7 @@ nss_tx_status_t nss_phys_if_set_nexthop(
  
  	return nss_phys_if_msg_sync(nss_ctx, &nim);
  }
@@ -42,6 +40,15 @@ index 4f9b20f..0c58d95 100644
  
  /*
   * nss_get_state()
--- 
-cgit v1.1
-
+--- a/nss_core.c
++++ b/nss_core.c
+@@ -47,7 +47,8 @@
+ (((LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0)))) || \
+ (((LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)))) || \
+ (((LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)))) || \
+-(((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0))))))
++(((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0)))) || \
++(((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0))))))
+ #error "Check skb recycle code in this file to match Linux version"
+ #endif
+ 
