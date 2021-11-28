@@ -1,0 +1,21 @@
+--- a/ipq806x/nss_gmac_ctrl.c
++++ b/ipq806x/nss_gmac_ctrl.c
+@@ -959,6 +959,9 @@ static int32_t nss_gmac_of_get_pdata(str
+ {
+ 	struct nss_gmac_dev *gmacdev = (struct nss_gmac_dev *)netdev_priv(netdev);
+ 	struct resource memres_devtree = {0};
++	phy_interface_t phyif = 0;
++
++	
+ 
+ 	if (of_property_read_u32(np, "qcom,id", &gmacdev->macid)
+ 		|| of_property_read_u32(np, "qcom,phy-mdio-addr",
+@@ -984,7 +987,7 @@ static int32_t nss_gmac_of_get_pdata(str
+ 
+ 	of_property_read_u32(np, "qcom,aux-clk-freq", &gmacdev->aux_clk_freq);
+ 
+-	gmaccfg->phy_mii_type = of_get_phy_mode(np);
++	gmaccfg->phy_mii_type = of_get_phy_mode(np, &phyif);
+ 	netdev->irq = irq_of_parse_and_map(np, 0);
+ 	if (netdev->irq == NO_IRQ) {
+ 		pr_err("%s: Can't map interrupt\n", np->name);
