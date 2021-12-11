@@ -1,0 +1,148 @@
+--- a/arch/arm/boot/dts/qcom-ipq8064.dtsi
++++ b/arch/arm/boot/dts/qcom-ipq8064.dtsi
+@@ -1536,6 +1536,76 @@
+ 			qcom,clmap-enabled;
+ 		};
+ 
++		nss1: nss@40800000 {
++			compatible = "qcom,nss";
++			qcom,low-frequency = <733000000>; /* orig value 110000000 */
++			qcom,mid-frequency = <733000000>; /* orig value 550000000 */
++			qcom,max-frequency = <733000000>;
++
++			interrupts = <GIC_SPI 214 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
++			reg = <0x36400000 0x1000 0x39010000 0x10000>;
++			reg-names = "nphys", "vphys";
++			resets = <&gcc UBI32_CORE2_CLKRST_CLAMP_RESET>,
++				 <&gcc UBI32_CORE2_CLAMP_RESET>,
++				 <&gcc UBI32_CORE2_AHB_RESET>,
++				 <&gcc UBI32_CORE2_AXI_RESET>;
++			reset-names = "clkrst-clamp", "clamp", "ahb", "axi";
++
++			qcom,id = <1>;
++			qcom,num-irq = <2>;
++			qcom,load-addr = <0x40800000>;
++			qcom,num-queue = <2>;
++			qcom,turbo-frequency;
++
++			qcom,capwap-enabled;
++			qcom,crypto-enabled;
++			qcom,dtls-enabled;
++			qcom,ipsec-enabled;
++		};
++
++		crypto1: crypto@38000000 {
++			compatible = "qcom,nss-crypto";
++			reg = <0x38000000 0x20000>, <0x38004000 0x22000>;
++			reg-names = "crypto_pbase", "bam_base";
++			clocks = <&gcc CE5_CORE_CLK>, <&gcc CE5_A_CLK>, <&gcc CE5_H_CLK>;
++			clock-names = "ce5_core", "ce5_aclk", "ce5_hclk";
++			resets = <&gcc CRYPTO_ENG1_RESET>, <&gcc CRYPTO_AHB_RESET>;
++			reset-names = "rst_eng", "rst_ahb";
++			qcom,id = <0>;
++			qcom,ee = <0>;
++		};
++
++		crypto2: crypto@38400000 {
++			compatible = "qcom,nss-crypto";
++			reg = <0x38400000 0x20000>, <0x38404000 0x22000>;
++			reg-names = "crypto_pbase", "bam_base";
++			resets = <&gcc CRYPTO_ENG2_RESET>;
++			reset-names = "rst_eng";
++			qcom,id = <1>;
++			qcom,ee = <0>;
++		};
++
++		crypto3: crypto@38800000 {
++			compatible = "qcom,nss-crypto";
++			reg = <0x38800000 0x20000>, <0x38804000 0x22000>;
++			reg-names = "crypto_pbase", "bam_base";
++			resets = <&gcc CRYPTO_ENG3_RESET>;
++			reset-names = "rst_eng";
++			qcom,id = <2>;
++			qcom,ee = <0>;
++		};
++
++		crypto4: crypto@38c00000 {
++			compatible = "qcom,nss-crypto";
++			reg = <0x38c00000 0x20000>, <0x38c04000 0x22000>;
++			reg-names = "crypto_pbase", "bam_base";
++			resets = <&gcc CRYPTO_ENG4_RESET>;
++			reset-names = "rst_eng";
++			qcom,id = <3>;
++			qcom,ee = <0>;
++		};
++
+ 
+ 		sdcc1bam:dma@12402000 {
+ 			compatible = "qcom,bam-v1.3.0";
+--- a/arch/arm/boot/dts/qcom-ipq8065-nbg6817.dts
++++ b/arch/arm/boot/dts/qcom-ipq8065-nbg6817.dts
+@@ -274,9 +274,9 @@
+ 	phy-mode = "rgmii";
+ 	qcom,id = <1>;
+ 	qcom,pcs-chanid = <0>;
+-	qcom,phy_mdio_addr = <4>;
+-	qcom,poll_required = <0>;
+-	qcom,rgmii_delay = <1>;
++	qcom,phy-mdio-addr = <4>;
++	qcom,poll-required = <0>;
++	qcom,rgmii-delay = <1>;
+ 	qcom,phy_mii_type = <0>;
+ 	qcom,emulation = <0>;
+ 	qcom,forced-speed = <1000>;
+@@ -302,9 +302,9 @@
+ 	phy-mode = "sgmii";
+ 	qcom,id = <2>;
+ 	qcom,pcs-chanid = <1>;
+-	qcom,phy_mdio_addr = <0>;	/* none */
+-	qcom,poll_required = <0>;	/* no polling */
+-	qcom,rgmii_delay = <0>;
++	qcom,phy-mdio-addr = <0>;	/* none */
++	qcom,poll-required = <0>;	/* no polling */
++	qcom,rgmii-delay = <0>;
+ 	qcom,phy_mii_type = <1>;
+ 	qcom,emulation = <0>;
+ 	qcom,forced-speed = <1000>;
+--- a/arch/arm/boot/dts/qcom-ipq8065-nighthawk.dtsi
++++ b/arch/arm/boot/dts/qcom-ipq8065-nighthawk.dtsi
+@@ -325,9 +325,9 @@
+ 	phy-mode = "rgmii";
+ 	qcom,id = <1>;
+ 	qcom,pcs-chanid = <0>;
+-	qcom,phy_mdio_addr = <4>;
+-	qcom,poll_required = <0>;
+-	qcom,rgmii_delay = <1>;
++	qcom,phy-mdio-addr = <4>;
++	qcom,poll-required = <0>;
++	qcom,rgmii-delay = <1>;
+ 	qcom,phy_mii_type = <0>;
+ 	qcom,emulation = <0>;
+ 	qcom,forced-speed = <1000>;
+@@ -356,9 +356,9 @@
+ 	phy-mode = "sgmii";
+ 	qcom,id = <2>;
+ 	qcom,pcs-chanid = <1>;
+-	qcom,phy_mdio_addr = <0>;	/* none */
+-	qcom,poll_required = <0>;	/* no polling */
+-	qcom,rgmii_delay = <0>;
++	qcom,phy-mdio-addr = <0>;	/* none */
++	qcom,poll-required = <0>;	/* no polling */
++	qcom,rgmii-delay = <0>;
+ 	qcom,phy_mii_type = <1>;
+ 	qcom,emulation = <0>;
+ 	qcom,forced-speed = <1000>;
+--- a/arch/arm/boot/dts/qcom-ipq8065.dtsi
++++ b/arch/arm/boot/dts/qcom-ipq8065.dtsi
+@@ -171,3 +171,10 @@
+ 	qcom,mid-frequency = <800000000>;
+ 	qcom,max-frequency = <800000000>;
+ };
++
++&nss1 {
++        qcom,low-frequency = <800000000>;
++        qcom,mid-frequency = <800000000>;
++        qcom,max-frequency = <800000000>;
++};
++
