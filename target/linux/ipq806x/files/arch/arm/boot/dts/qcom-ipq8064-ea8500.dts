@@ -113,16 +113,16 @@
 };
 
 &gmac1 {
-	qcom,phy_mdio_addr = <4>;
-	qcom,poll_required = <1>;
-	qcom,rgmii_delay = <0>;
+	qcom,phy-mdio-addr = <4>;
+	qcom,poll-required = <1>;
+	qcom,rgmii-delay = <0>;
 	qcom,emulation = <0>;
 };
 
 /* LAN */
 &gmac2 {
-	qcom,phy_mdio_addr = <0>;	/* none */
-	qcom,poll_required = <0>;	/* no polling */
-	qcom,rgmii_delay = <0>;
+	qcom,phy-mdio-addr = <0>;	/* none */
+	qcom,poll-required = <0>;	/* no polling */
+	qcom,rgmii-delay = <0>;
 	qcom,emulation = <0>;
 };
