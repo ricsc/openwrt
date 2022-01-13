@@ -89,3 +89,17 @@
 		reg = <0x6080000 0x1f80000>;
 	};
 };
+
+
+&gmac1 {
+	qcom,phy-mdio-addr = <0>;
+	qcom,poll-required = <0>;
+	qcom,rgmii-delay = <1>;
+};
+
+/* LAN */
+&gmac2 {
+	qcom,phy-mdio-addr = <4>;
+	qcom,poll-required = <0>;
+	qcom,rgmii-delay = <0>;		
+};
