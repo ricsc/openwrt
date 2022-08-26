@@ -1,0 +1,521 @@
+*** a/ecm_interface.c	2021-11-27 10:18:56.916364000 +0900
+--- b/ecm_interface.c	2021-11-27 10:23:54.126364000 +0900
+*************** bool ecm_interface_is_l2tp_packet_by_ver
+*** 1276,1282 ****
+  		return true;
+  	}
+  
+! 	if (out->priv_flags_qca_ecm & flag) {
+  		dev_put(in);
+  		return true;
+  	}
+--- 1276,1282 ----
+  		return true;
+  	}
+  
+! 	if (in->priv_flags_qca_ecm & flag) {
+  		dev_put(in);
+  		return true;
+  	}
+*************** bool ecm_interface_is_l2tp_pptp(struct s
+*** 1309,1315 ****
+  		return true;
+  	}
+  
+! 	if (out->priv_flags_qca_ecm & (IFF_QCA_ECM_PPP_L2TPV2 | IFF_QCA_ECM_PPP_L2TPV3 |
+  			       IFF_QCA_ECM_PPP_PPTP)) {
+  		dev_put(in);
+  		return true;
+--- 1309,1315 ----
+  		return true;
+  	}
+  
+! 	if (in->priv_flags_qca_ecm & (IFF_QCA_ECM_PPP_L2TPV2 | IFF_QCA_ECM_PPP_L2TPV3 |
+  			       IFF_QCA_ECM_PPP_PPTP)) {
+  		dev_put(in);
+  		return true;
+*** a/ecm_interface.c	2022-08-06 13:09:27.460000000 +0900
+--- b/ecm_interface.c	2022-08-06 13:17:36.600000000 +0900
+*************** bool ecm_interface_is_pptp(struct sk_buf
+*** 1219,1225 ****
+  	 * skip first pass of l2tp/pptp tunnel encapsulated traffic
+  	 */
+  	if (out->type == ARPHRD_PPP) {
+! 		if (out->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_PPTP) {
+  			return true;
+  		}
+  	}
+--- 1219,1225 ----
+  	 * skip first pass of l2tp/pptp tunnel encapsulated traffic
+  	 */
+  	if (out->type == ARPHRD_PPP) {
+! 		if (out->priv_flags_qca_ecm & IFF_EXT_PPP_PPTP) {
+  			return true;
+  		}
+  	}
+*************** bool ecm_interface_is_pptp(struct sk_buf
+*** 1230,1236 ****
+  	}
+  
+  	if (in->type == ARPHRD_PPP) {
+! 		if (in->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_PPTP) {
+  			dev_put(in);
+  			return true;
+  		}
+--- 1230,1236 ----
+  	}
+  
+  	if (in->type == ARPHRD_PPP) {
+! 		if (in->priv_flags_qca_ecm & IFF_EXT_PPP_PPTP) {
+  			dev_put(in);
+  			return true;
+  		}
+*************** bool ecm_interface_is_l2tp_packet_by_ver
+*** 1255,1264 ****
+  
+  	switch (ver) {
+  	case 2:
+! 		flag = IFF_QCA_ECM_PPP_L2TPV2;
+  		break;
+  	case 3:
+! 		flag = IFF_QCA_ECM_PPP_L2TPV3;
+  		break;
+  	default:
+  		break;
+--- 1255,1264 ----
+  
+  	switch (ver) {
+  	case 2:
+! 		flag = IFF_EXT_PPP_L2TPV2;
+  		break;
+  	case 3:
+! 		flag = IFF_EXT_PPP_L2TPV3;
+  		break;
+  	default:
+  		break;
+*************** bool ecm_interface_is_l2tp_packet_by_ver
+*** 1267,1273 ****
+  	/*
+  	 * skip first pass of l2tp/pptp tunnel encapsulated traffic
+  	 */
+! 	if (out->priv_flags_qca_ecm & flag) {
+  		return true;
+  	}
+  
+--- 1267,1273 ----
+  	/*
+  	 * skip first pass of l2tp/pptp tunnel encapsulated traffic
+  	 */
+! 	if (out->priv_flags_qca_ecm & flag) {
+  		return true;
+  	}
+  
+*************** bool ecm_interface_is_l2tp_packet_by_ver
+*** 1276,1282 ****
+  		return true;
+  	}
+  
+! 	if (in->priv_flags_qca_ecm & flag) {
+  		dev_put(in);
+  		return true;
+  	}
+--- 1276,1282 ----
+  		return true;
+  	}
+  
+! 	if (in->priv_flags_qca_ecm & flag) {
+  		dev_put(in);
+  		return true;
+  	}
+*************** bool ecm_interface_is_l2tp_pptp(struct s
+*** 1299,1306 ****
+  	/*
+  	 * skip first pass of l2tp/pptp tunnel encapsulated traffic
+  	 */
+! 	if (out->priv_flags_qca_ecm & (IFF_QCA_ECM_PPP_L2TPV2 | IFF_QCA_ECM_PPP_L2TPV3 |
+! 			IFF_QCA_ECM_PPP_PPTP)) {
+  		return true;
+  	}
+  
+--- 1299,1306 ----
+  	/*
+  	 * skip first pass of l2tp/pptp tunnel encapsulated traffic
+  	 */
+! 	if (out->priv_flags_qca_ecm & (IFF_EXT_PPP_L2TPV2 | IFF_EXT_PPP_L2TPV3 |
+! 			IFF_EXT_PPP_PPTP)) {
+  		return true;
+  	}
+  
+*************** bool ecm_interface_is_l2tp_pptp(struct s
+*** 1309,1316 ****
+  		return true;
+  	}
+  
+! 	if (in->priv_flags_qca_ecm & (IFF_QCA_ECM_PPP_L2TPV2 | IFF_QCA_ECM_PPP_L2TPV3 |
+! 			       IFF_QCA_ECM_PPP_PPTP)) {
+  		dev_put(in);
+  		return true;
+  	}
+--- 1309,1316 ----
+  		return true;
+  	}
+  
+! 	if (in->priv_flags_qca_ecm & (IFF_EXT_PPP_L2TPV2 | IFF_EXT_PPP_L2TPV3 |
+! 			       IFF_EXT_PPP_PPTP)) {
+  		dev_put(in);
+  		return true;
+  	}
+*************** struct ecm_db_iface_instance *ecm_interf
+*** 2407,2413 ****
+  		/*
+  		 * GRE TAP?
+  		 */
+! 		if (dev->priv_flags_qca_ecm & (IFF_QCA_ECM_GRE_V4_TAP | IFF_QCA_ECM_GRE_V6_TAP)) {
+  			interface_type = feci->ae_interface_type_get(feci, dev);
+  			ae_interface_num = feci->ae_interface_number_by_dev_type_get(dev, interface_type);
+  
+--- 2407,2413 ----
+  		/*
+  		 * GRE TAP?
+  		 */
+! 		if (dev->priv_flags_qca_ecm & (IFF_EXT_GRE_V4_TAP | IFF_EXT_GRE_V6_TAP)) {
+  			interface_type = feci->ae_interface_type_get(feci, dev);
+  			ae_interface_num = feci->ae_interface_number_by_dev_type_get(dev, interface_type);
+  
+*************** identifier_update:
+*** 2671,2677 ****
+  	/*
+  	 * OVPN Tunnel?
+  	 */
+! 	if ((dev_type == ARPHRD_NONE) && (dev->priv_flags_qca_ecm & IFF_QCA_ECM_TUN_TAP)) {
+  		struct net_device *tun_dev = NULL;
+  		ip_addr_t saddr, daddr;
+  
+--- 2671,2677 ----
+  	/*
+  	 * OVPN Tunnel?
+  	 */
+! 	if ((dev_type == ARPHRD_NONE) && (dev->priv_flags_qca_ecm & IFF_EXT_TUN_TAP)) {
+  		struct net_device *tun_dev = NULL;
+  		ip_addr_t saddr, daddr;
+  
+*************** identifier_update:
+*** 2737,2743 ****
+  	 * ppp_is_multilink() and ppp_hold_channels() which acquire same lock
+  	 */
+  
+! 	if ((dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_L2TPV2) && ppp_is_xmit_locked(dev)) {
+  		if (skb && (skb->skb_iif == dev->ifindex)) {
+  			struct pppol2tp_common_addr info;
+  
+--- 2737,2743 ----
+  	 * ppp_is_multilink() and ppp_hold_channels() which acquire same lock
+  	 */
+  
+! 	if ((dev->priv_flags_qca_ecm & IFF_EXT_PPP_L2TPV2) && ppp_is_xmit_locked(dev)) {
+  		if (skb && (skb->skb_iif == dev->ifindex)) {
+  			struct pppol2tp_common_addr info;
+  
+*************** identifier_update:
+*** 2795,2801 ****
+  #endif
+  
+  #ifdef ECM_INTERFACE_PPTP_ENABLE
+! 	if ((protocol == IPPROTO_GRE) && skb && v4_hdr && (dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_PPTP)) {
+  		struct gre_hdr_pptp *gre_hdr;
+  		uint16_t proto;
+  		int ret;
+--- 2795,2801 ----
+  #endif
+  
+  #ifdef ECM_INTERFACE_PPTP_ENABLE
+! 	if ((protocol == IPPROTO_GRE) && skb && v4_hdr && (dev->priv_flags_qca_ecm & IFF_EXT_PPP_PPTP)) {
+  		struct gre_hdr_pptp *gre_hdr;
+  		uint16_t proto;
+  		int ret;
+*************** int32_t ecm_interface_heirarchy_construc
+*** 3973,3979 ****
+  		if (((ip_version == 4) && (protocol == IPPROTO_IPV6)) ||
+  		    ((ip_version == 6) && (protocol == IPPROTO_IPIP)) ||
+  					  (protocol == IPPROTO_GRE) ||
+! 		    ((given_dest_dev->type == ARPHRD_NONE) && (given_dest_dev->priv_flags_qca_ecm & IFF_QCA_ECM_TUN_TAP))) {
+  			dev_put(dest_dev);
+  			dest_dev = given_dest_dev;
+  			if (dest_dev) {
+--- 3973,3979 ----
+  		if (((ip_version == 4) && (protocol == IPPROTO_IPV6)) ||
+  		    ((ip_version == 6) && (protocol == IPPROTO_IPIP)) ||
+  					  (protocol == IPPROTO_GRE) ||
+! 		    ((given_dest_dev->type == ARPHRD_NONE) && (given_dest_dev->priv_flags_qca_ecm & IFF_EXT_TUN_TAP))) {
+  			dev_put(dest_dev);
+  			dest_dev = given_dest_dev;
+  			if (dest_dev) {
+*************** int32_t ecm_interface_heirarchy_construc
+*** 3992,3998 ****
+  	/*
+  	 * if the address is a local address and indev=l2tp.
+  	 */
+! 	if ((given_src_dev->type == ARPHRD_PPP) && (given_src_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  		dev_put(dest_dev);
+  		dest_dev = given_dest_dev;
+  		if (dest_dev) {
+--- 3992,3998 ----
+  	/*
+  	 * if the address is a local address and indev=l2tp.
+  	 */
+! 	if ((given_src_dev->type == ARPHRD_PPP) && (given_src_dev->priv_flags_qca_ecm & IFF_EXT_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  		dev_put(dest_dev);
+  		dest_dev = given_dest_dev;
+  		if (dest_dev) {
+*************** int32_t ecm_interface_heirarchy_construc
+*** 4006,4012 ****
+  	/*
+  	 * if the address is a local address and indev=PPTP.
+  	 */
+! 	if (protocol == IPPROTO_GRE && given_dest_dev && (given_dest_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_PPTP)){
+  		dev_put(dest_dev);
+  		dest_dev = given_dest_dev;
+  		if (dest_dev) {
+--- 4006,4012 ----
+  	/*
+  	 * if the address is a local address and indev=PPTP.
+  	 */
+! 	if (protocol == IPPROTO_GRE && given_dest_dev && (given_dest_dev->priv_flags_qca_ecm & IFF_EXT_PPP_PPTP)){
+  		dev_put(dest_dev);
+  		dest_dev = given_dest_dev;
+  		if (dest_dev) {
+*************** int32_t ecm_interface_heirarchy_construc
+*** 4055,4061 ****
+  		if (((ip_version == 4) && (protocol == IPPROTO_IPV6)) ||
+  		    ((ip_version == 6) && (protocol == IPPROTO_IPIP)) ||
+  					  (protocol == IPPROTO_GRE) ||
+! 		    ((given_src_dev->type == ARPHRD_NONE) && (given_src_dev->priv_flags_qca_ecm & IFF_QCA_ECM_TUN_TAP))) {
+  			dev_put(src_dev);
+  			src_dev = given_src_dev;
+  			if (src_dev) {
+--- 4055,4061 ----
+  		if (((ip_version == 4) && (protocol == IPPROTO_IPV6)) ||
+  		    ((ip_version == 6) && (protocol == IPPROTO_IPIP)) ||
+  					  (protocol == IPPROTO_GRE) ||
+! 		    ((given_src_dev->type == ARPHRD_NONE) && (given_src_dev->priv_flags_qca_ecm & IFF_EXT_TUN_TAP))) {
+  			dev_put(src_dev);
+  			src_dev = given_src_dev;
+  			if (src_dev) {
+*************** lag_success:
+*** 4505,4511 ****
+  			/*
+  			 * OVPN ?
+  			 */
+! 			if ((dest_dev_type == ARPHRD_NONE) && (dest_dev->priv_flags_qca_ecm & IFF_QCA_ECM_TUN_TAP)) {
+  				DEBUG_TRACE("Net device: %p is OVPN, device name: %s\n", dest_dev, dest_dev->name);
+  				break;
+  			}
+--- 4505,4511 ----
+  			/*
+  			 * OVPN ?
+  			 */
+! 			if ((dest_dev_type == ARPHRD_NONE) && (dest_dev->priv_flags_qca_ecm & IFF_EXT_TUN_TAP)) {
+  				DEBUG_TRACE("Net device: %p is OVPN, device name: %s\n", dest_dev, dest_dev->name);
+  				break;
+  			}
+*************** lag_success:
+*** 4524,4530 ****
+  			DEBUG_TRACE("%p: Net device: %p is PPP\n", feci, dest_dev);
+  
+  #ifdef ECM_INTERFACE_L2TPV2_ENABLE
+! 			if ((given_src_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  				if (skb->skb_iif == dest_dev->ifindex) {
+  					DEBUG_TRACE("%p: Net device: %p PPP channel is PPPoL2TPV2\n", feci, dest_dev);
+  					break;
+--- 4524,4530 ----
+  			DEBUG_TRACE("%p: Net device: %p is PPP\n", feci, dest_dev);
+  
+  #ifdef ECM_INTERFACE_L2TPV2_ENABLE
+! 			if ((given_src_dev->priv_flags_qca_ecm & IFF_EXT_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  				if (skb->skb_iif == dest_dev->ifindex) {
+  					DEBUG_TRACE("%p: Net device: %p PPP channel is PPPoL2TPV2\n", feci, dest_dev);
+  					break;
+*************** lag_success:
+*** 4533,4539 ****
+  #endif
+  
+  #ifdef ECM_INTERFACE_PPTP_ENABLE
+! 			if (protocol == IPPROTO_GRE && dest_dev && (dest_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_PPTP)) {
+  				DEBUG_TRACE("%p: Net device: %p PPP channel is PPTP\n", feci, dest_dev);
+  				break;
+  			}
+--- 4533,4539 ----
+  #endif
+  
+  #ifdef ECM_INTERFACE_PPTP_ENABLE
+! 			if (protocol == IPPROTO_GRE && dest_dev && (dest_dev->priv_flags_qca_ecm & IFF_EXT_PPP_PPTP)) {
+  				DEBUG_TRACE("%p: Net device: %p PPP channel is PPTP\n", feci, dest_dev);
+  				break;
+  			}
+*************** int32_t ecm_interface_multicast_from_hei
+*** 4799,4805 ****
+  	/*
+  	 * if the address is a local address and indev=l2tp.
+  	 */
+! 	if ((given_src_dev->type == ARPHRD_PPP) && (given_src_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  		dev_put(dest_dev);
+  		dest_dev = given_dest_dev;
+  		if (dest_dev) {
+--- 4799,4805 ----
+  	/*
+  	 * if the address is a local address and indev=l2tp.
+  	 */
+! 	if ((given_src_dev->type == ARPHRD_PPP) && (given_src_dev->priv_flags_qca_ecm & IFF_EXT_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  		dev_put(dest_dev);
+  		dest_dev = given_dest_dev;
+  		if (dest_dev) {
+*************** int32_t ecm_interface_multicast_from_hei
+*** 5266,5272 ****
+  			DEBUG_TRACE("Net device: %p is PPP\n", dest_dev);
+  
+  #ifdef ECM_INTERFACE_L2TPV2_ENABLE
+! 			if ((given_src_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  				if (skb->skb_iif == dest_dev->ifindex) {
+  					DEBUG_TRACE("Net device: %p PPP channel is PPPoL2TPV2\n", dest_dev);
+  					break;
+--- 5266,5272 ----
+  			DEBUG_TRACE("Net device: %p is PPP\n", dest_dev);
+  
+  #ifdef ECM_INTERFACE_L2TPV2_ENABLE
+! 			if ((given_src_dev->priv_flags_qca_ecm & IFF_EXT_PPP_L2TPV2) && ppp_is_xmit_locked(given_src_dev)) {
+  				if (skb->skb_iif == dest_dev->ifindex) {
+  					DEBUG_TRACE("Net device: %p PPP channel is PPPoL2TPV2\n", dest_dev);
+  					break;
+*** a/frontends/sfe/ecm_sfe_ported_ipv6.c	2022-08-06 13:22:42.030000000 +0900
+--- b/frontends/sfe/ecm_sfe_ported_ipv6.c	2022-08-06 13:24:45.430000000 +0900
+*************** unsigned int ecm_sfe_ported_ipv6_process
+*** 1787,1793 ****
+  		/*
+  		 * Deny acceleration for L2TP-over-UDP tunnel
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_L2TPV2) && ppp_is_xmit_locked(in_dev)) {
+  			DEBUG_TRACE("Skip packets for L2TP tunnel in skb %p\n", skb);
+  			can_accel = false;
+  		}
+--- 1787,1793 ----
+  		/*
+  		 * Deny acceleration for L2TP-over-UDP tunnel
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_EXT_PPP_L2TPV2) && ppp_is_xmit_locked(in_dev)) {
+  			DEBUG_TRACE("Skip packets for L2TP tunnel in skb %p\n", skb);
+  			can_accel = false;
+  		}
+*** a/frontends/nss/ecm_nss_common.h	2022-08-06 13:25:28.030000000 +0900
+--- b/frontends/nss/ecm_nss_common.h	2022-08-06 13:25:54.500000000 +0900
+*************** static inline int32_t ecm_nss_common_get
+*** 144,150 ****
+  		/*
+  		 * If device is not GRETAP then return NONE.
+  		 */
+! 		if (!(dev->priv_flags_qca_ecm & (IFF_QCA_ECM_GRE_V4_TAP | IFF_QCA_ECM_GRE_V6_TAP))) {
+  			break;
+  		}
+  #endif
+--- 144,150 ----
+  		/*
+  		 * If device is not GRETAP then return NONE.
+  		 */
+! 		if (!(dev->priv_flags_qca_ecm & (IFF_EXT_GRE_V4_TAP | IFF_EXT_GRE_V6_TAP))) {
+  			break;
+  		}
+  #endif
+*** a/frontends/nss/ecm_nss_ipv6.c	2022-08-06 13:26:29.740000000 +0900
+--- b/frontends/nss/ecm_nss_ipv6.c	2022-08-06 13:26:56.020000000 +0900
+*************** static unsigned int ecm_nss_ipv6_ip_proc
+*** 1044,1050 ****
+  		 * If any of the input or output interface is a GRE V4 TAP/TUN interface
+  		 * we can continue to accelerate it.
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_QCA_ECM_GRE_V4_TAP) || (out_dev->priv_flags_qca_ecm & IFF_QCA_ECM_GRE_V4_TAP)) {
+  #ifndef ECM_INTERFACE_GRE_TAP_ENABLE
+  			DEBUG_TRACE("GRE TAP acceleration is disabled\n");
+  			return NF_ACCEPT;
+--- 1044,1050 ----
+  		 * If any of the input or output interface is a GRE V4 TAP/TUN interface
+  		 * we can continue to accelerate it.
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_EXT_GRE_V4_TAP) || (out_dev->priv_flags_qca_ecm & IFF_EXT_GRE_V4_TAP)) {
+  #ifndef ECM_INTERFACE_GRE_TAP_ENABLE
+  			DEBUG_TRACE("GRE TAP acceleration is disabled\n");
+  			return NF_ACCEPT;
+*** a/frontends/nss/ecm_nss_ipv4.c	2022-08-06 13:27:16.770000000 +0900
+--- b/frontends/nss/ecm_nss_ipv4.c	2022-08-06 13:27:38.930000000 +0900
+*************** static unsigned int ecm_nss_ipv4_ip_proc
+*** 1052,1058 ****
+  		 * If any of the input or output interface is a GRE V4 TAP/TUN interface
+  		 * we can continue to accelerate it.
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_QCA_ECM_GRE_V4_TAP) || (out_dev->priv_flags_qca_ecm & IFF_QCA_ECM_GRE_V4_TAP)) {
+  #ifndef ECM_INTERFACE_GRE_TAP_ENABLE
+  			DEBUG_TRACE("GRE TAP acceleration is disabled\n");
+  			return NF_ACCEPT;
+--- 1052,1058 ----
+  		 * If any of the input or output interface is a GRE V4 TAP/TUN interface
+  		 * we can continue to accelerate it.
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_EXT_GRE_V4_TAP) || (out_dev->priv_flags_qca_ecm & IFF_EXT_GRE_V4_TAP)) {
+  #ifndef ECM_INTERFACE_GRE_TAP_ENABLE
+  			DEBUG_TRACE("GRE TAP acceleration is disabled\n");
+  			return NF_ACCEPT;
+*** a/frontends/nss/ecm_nss_non_ported_ipv4.c	2022-08-06 13:28:09.960000000 +0900
+--- b/frontends/nss/ecm_nss_non_ported_ipv4.c	2022-08-06 13:28:25.420000000 +0900
+*************** static void ecm_nss_non_ported_ipv4_conn
+*** 639,645 ****
+  #ifdef ECM_INTERFACE_GRE_TAP_ENABLE
+  			dev = dev_get_by_index(&init_net, ecm_db_iface_interface_identifier_get(ii));
+  			if (dev) {
+! 				if (dev->priv_flags_qca_ecm & IFF_QCA_ECM_GRE_V4_TAP) {
+  					/*
+  					 * Clear QOS_VALID to prevent outer rule from overwriting
+  					 * inner flow's QoS classification.
+--- 639,645 ----
+  #ifdef ECM_INTERFACE_GRE_TAP_ENABLE
+  			dev = dev_get_by_index(&init_net, ecm_db_iface_interface_identifier_get(ii));
+  			if (dev) {
+! 				if (dev->priv_flags_qca_ecm & IFF_EXT_GRE_V4_TAP) {
+  					/*
+  					 * Clear QOS_VALID to prevent outer rule from overwriting
+  					 * inner flow's QoS classification.
+*** a/frontends/nss/ecm_nss_non_ported_ipv6.c	2022-08-06 13:28:45.720000000 +0900
+--- b/frontends/nss/ecm_nss_non_ported_ipv6.c	2022-08-06 13:29:04.090000000 +0900
+*************** static void ecm_nss_non_ported_ipv6_conn
+*** 547,553 ****
+  #ifdef ECM_INTERFACE_GRE_TAP_ENABLE
+  			dev = dev_get_by_index(&init_net, ecm_db_iface_interface_identifier_get(ii));
+  			if (dev) {
+! 				if (dev->priv_flags_qca_ecm & IFF_QCA_ECM_GRE_V6_TAP) {
+  					/*
+  					 * Clear QOS_VALID to prevent outer rule from overwriting
+  					 * inner flow's QoS classification.
+--- 547,553 ----
+  #ifdef ECM_INTERFACE_GRE_TAP_ENABLE
+  			dev = dev_get_by_index(&init_net, ecm_db_iface_interface_identifier_get(ii));
+  			if (dev) {
+! 				if (dev->priv_flags_qca_ecm & IFF_EXT_GRE_V6_TAP) {
+  					/*
+  					 * Clear QOS_VALID to prevent outer rule from overwriting
+  					 * inner flow's QoS classification.
+*** a/frontends/nss/ecm_nss_ported_ipv6.c	2022-08-06 13:36:27.370000000 +0900
+--- b/frontends/nss/ecm_nss_ported_ipv6.c	2022-08-06 13:36:43.490000000 +0900
+*************** unsigned int ecm_nss_ported_ipv6_process
+*** 1883,1889 ****
+  		/*
+  		 * Deny acceleration for L2TP-over-UDP tunnel
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_QCA_ECM_PPP_L2TPV2) && ppp_is_xmit_locked(in_dev)) {
+  			DEBUG_TRACE("Skip packets for L2TP tunnel in skb %p\n", skb);
+  			can_accel = false;
+  		}
+--- 1883,1889 ----
+  		/*
+  		 * Deny acceleration for L2TP-over-UDP tunnel
+  		 */
+! 		if ((in_dev->priv_flags_qca_ecm & IFF_EXT_PPP_L2TPV2) && ppp_is_xmit_locked(in_dev)) {
+  			DEBUG_TRACE("Skip packets for L2TP tunnel in skb %p\n", skb);
+  			can_accel = false;
+  		}

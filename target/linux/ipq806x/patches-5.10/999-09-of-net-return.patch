@@ -9,3 +9,44 @@
  		}
  
  	return -ENODEV;
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -1698,6 +1698,29 @@ enum netdev_priv_flags_ext {
+ #define IFF_LIVE_RENAME_OK		IFF_LIVE_RENAME_OK
+ #define IFF_NO_IP_ALIGN			IFF_NO_IP_ALIGN
+ 
++
++/* QCA NSS ECM support - Start */
++enum netdev_priv_qca_ecm_flags {
++        IFF_QCA_ECM_TUN_TAP             = 1<<0,
++        IFF_QCA_ECM_PPP_L2TPV2          = 1<<1,
++        IFF_QCA_ECM_PPP_L2TPV3          = 1<<2,
++        IFF_QCA_ECM_PPP_PPTP            = 1<<3,
++        IFF_QCA_ECM_GRE_V4_TAP          = 1<<4,
++        IFF_QCA_ECM_GRE_V6_TAP          = 1<<5,
++        IFF_QCA_ECM_IFB                 = 1<<6,
++};
++
++#define IFF_QCA_ECM_TUN_TAP             IFF_QCA_ECM_TUN_TAP
++#define IFF_QCA_ECM_PPP_L2TPV2          IFF_QCA_ECM_PPP_L2TPV2
++#define IFF_QCA_ECM_PPP_L2TPV3          IFF_QCA_ECM_PPP_L2TPV3
++#define IFF_QCA_ECM_PPP_PPTP            IFF_QCA_ECM_PPP_PPTP
++#define IFF_QCA_ECM_GRE_V4_TAP          IFF_QCA_ECM_GRE_V4_TAP
++#define IFF_QCA_ECM_GRE_V6_TAP          IFF_QCA_ECM_GRE_V6_TAP
++#define IFF_QCA_ECM_IFB                 IFF_QCA_ECM_IFB
++/* QCA NSS ECM support - End */
++
++
++
+ /* Specifies the type of the struct net_device::ml_priv pointer */
+ enum netdev_ml_priv_type {
+ 	ML_PRIV_NONE,
+@@ -2046,7 +2069,7 @@ struct net_device {
+ 
+ 	unsigned int		flags;
+ 	unsigned int		priv_flags;
+-	unsigned int		priv_flags_ext;
++	unsigned int            priv_flags_qca_ecm;     /* QCA NSS ECM support */
+ 
+ 	unsigned short		gflags;
+ 	unsigned short		padded;
