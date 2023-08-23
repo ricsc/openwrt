@@ -232,14 +232,6 @@
  
  	if (sk_pppox(po)->sk_state & PPPOX_DEAD)
  		goto tx_error;
-@@ -155,7 +233,7 @@ static int pptp_xmit(struct ppp_channel
- 				   opt->dst_addr.sin_addr.s_addr,
- 				   opt->src_addr.sin_addr.s_addr,
- 				   0, 0, IPPROTO_GRE,
--				   RT_TOS(0), sk->sk_bound_dev_if);
-+				   RT_TOS(0), 0);
- 	if (IS_ERR(rt))
- 		goto tx_error;
  
 @@ -244,7 +322,32 @@ static int pptp_xmit(struct ppp_channel
  	ip_select_ident(net, skb, NULL);
@@ -297,16 +289,6 @@
  		return sk_receive_skb(sk_pppox(po), skb, 0);
  	}
  drop:
-@@ -442,8 +553,7 @@ static int pptp_connect(struct socket *s
- 				   opt->dst_addr.sin_addr.s_addr,
- 				   opt->src_addr.sin_addr.s_addr,
- 				   0, 0,
--				   IPPROTO_GRE, RT_CONN_FLAGS(sk),
--				   sk->sk_bound_dev_if);
-+				   IPPROTO_GRE, RT_CONN_FLAGS(sk), 0);
- 	if (IS_ERR(rt)) {
- 		error = -EHOSTUNREACH;
- 		goto end;
 @@ -464,7 +574,7 @@ static int pptp_connect(struct socket *s
  
  	opt->dst_addr = sp->sa_addr.pptp;
@@ -316,7 +298,7 @@
   end:
  	release_sock(sk);
  	return error;
-@@ -594,9 +704,169 @@ static int pptp_ppp_ioctl(struct ppp_cha
+@@ -626,9 +736,169 @@ static int pptp_ppp_ioctl(struct ppp_cha
  	return err;
  }
  
