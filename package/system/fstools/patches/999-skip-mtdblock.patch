@@ -1,0 +1,13 @@
+--- a/block.c
++++ b/block.c
+@@ -537,6 +537,10 @@ static struct probe_info* _probe_path(ch
+ 	if (!strncmp(path, "/dev/mtdblock", 13) && mtdblock_is_nand(path + 13))
+ 		return NULL;
+ 
++	//workaround armor g5 first boot after sysupgrade	
++	if (!strncmp(path, "/dev/mtdblock", 13))
++		return NULL;
++
+ 	pr = probe_path(path);
+ 	if (!pr)
+ 		return NULL;
