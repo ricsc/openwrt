@@ -1,0 +1,11 @@
+#!/bin/sh
+echo $1 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/led_pattern
+echo 1 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/run_engine
+echo $2 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0035/led_pattern
+echo 1 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0035/run_engine
+
+
+#solid blue echo 11 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/led_pattern
+#light solid blue echo 15 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/led_pattern
+#red blink echo 3 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/led_pattern
+
