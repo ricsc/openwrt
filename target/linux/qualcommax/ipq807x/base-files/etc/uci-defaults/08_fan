@@ -1,0 +1,23 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+board=$(board_name)
+
+case "$board" in
+	zyxel,nbg7815)
+		local config_section="config"
+		uci set fanctld.$config_section.Enabled='1'
+		uci set fanctld.$config_section.Gpio='fan'
+		uci set fanctld.$config_section.Temp='75000'
+		uci set fanctld.$config_section.Hyst='5000'
+		uci set fanctld.$config_section.Debug='0'
+		uci set fanctld.$config_section.Delay='5'
+		uci set fanctld.$config_section.Hits='3'
+		uci commit fanctld
+		/etc/init.d/fanctld enable
+		/etc/init.d/fanctld start
+	;;
+esac
+
+exit 0
