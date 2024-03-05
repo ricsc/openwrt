@@ -1,0 +1,11 @@
+#!/bin/sh
+[ "$ACTION" = "ifup" -a "$INTERFACE" = "wan" ] && {
+    logger "iface wan up detected..."
+    echo 15 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/led_pattern && echo 1 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/run_engine
+}
+
+[ "$ACTION" = "ifdown" -a "$INTERFACE" = "wan" ] && {
+    logger "iface down detected..."
+    echo 5 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/led_pattern && echo 1 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/run_engine
+}
+exit 0
