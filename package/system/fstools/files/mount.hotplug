@@ -1,1 +1,9 @@
-[ "$ACTION" = "add" -o "$ACTION" = "remove" ] && /sbin/block hotplug
+[ "$ACTION" = "add" -o "$ACTION" = "remove" ]; then
+        case "$DEVNAME" in
+                mtd*) exit 0 ;;
+                mmcblk*) exit 0 ;;
+                mtdblock*) exit 0 ;;
+                *)
+                /sbin/block hotplug ;;
+        esac
+
