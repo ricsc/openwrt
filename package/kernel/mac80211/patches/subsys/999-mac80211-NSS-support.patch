@@ -217,7 +217,7 @@
 +	skb_push(skb, ETH_HLEN);
 +	ret = nss_virt_if_tx_buf(sdata->nssctx, skb);
 +	if (ret) {
-+		if (net_ratelimit()) {
++		if (net_ratelimit() && ret != NSS_TX_FAILURE_TOO_SHORT) {
 +			sdata_err(sdata, "NSS TX failed with error: %s\n",
 +				  nss_tx_status_str(ret));
 +		}
