@@ -1,0 +1,61 @@
+--- a/drivers/net/wireless/ath/ath11k/qmi.c	2024-02-19 18:00:47.000000000 +0100
++++ b/drivers/net/wireless/ath/ath11k/qmi.c	2024-03-17 05:58:49.622906239 +0100
+@@ -14,6 +14,7 @@
+ #include <linux/of_address.h>
+ #include <linux/ioport.h>
+ #include <linux/firmware.h>
++#include <linux/nvmem-consumer.h>
+ #include <linux/of_irq.h>
+ 
+ #define SLEEP_CLOCK_SELECT_INTERNAL_BIT	0x02
+@@ -2401,6 +2402,38 @@ err_free_req:
+ 	return ret;
+ }
+ 
++static int ath11k_qmi_download_cal_nvmem(struct ath11k_base *ab, const char *cell_name)
++{
++	struct nvmem_cell *cell;
++	void *buf;
++	size_t len;
++	int ret;
++	u32 file_type = ATH11K_QMI_FILE_TYPE_CALDATA;
++
++	cell = devm_nvmem_cell_get(ab->dev, cell_name);
++	if (IS_ERR(cell)) {
++		ath11k_info(ab, "nvmem cell '%s' cell is not defined, falling back to firmware loader.\n", cell_name);
++		ret = PTR_ERR(cell);
++		return ret;
++	}
++
++	buf = nvmem_cell_read(cell, &len);
++	if (IS_ERR(buf)) {
++		ath11k_err(ab, "read from nvmem cell '%s' failed, falling back to firmware loader.\n", cell_name);
++		return PTR_ERR(buf);
++	}
++
++	ret = ath11k_qmi_load_file_target_mem(ab, buf, len, file_type);
++	kfree(buf);
++	if (ret < 0) {
++		ath11k_err(ab, "failed to upload nvmem cell '%s' to device, falling back to firmware loader. length: %lu\n", cell_name, len);
++		return ret;
++	}
++
++	ath11k_info(ab, "nvmem cell '%s' successfully uploaded. type: %u, length: %lu\n", cell_name, file_type, len);
++	return ret;
++}
++
+ static int ath11k_qmi_load_bdf_qmi(struct ath11k_base *ab,
+ 				   bool regdb)
+ {
+@@ -2453,6 +2486,11 @@ static int ath11k_qmi_load_bdf_qmi(struc
+ 	} else {
+ 		file_type = ATH11K_QMI_FILE_TYPE_CALDATA;
+ 
++		/* Try to load calibration from nvmem cell */
++		ret = ath11k_qmi_download_cal_nvmem(ab, "pre-calibration");
++		if (ret > -1)
++			goto out;
++
+ 		/* cal-<bus>-<id>.bin */
+ 		snprintf(filename, sizeof(filename), "cal-%s-%s.bin",
+ 			 ath11k_bus_str(ab->hif.bus), dev_name(dev));
