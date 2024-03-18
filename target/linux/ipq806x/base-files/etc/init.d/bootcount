@@ -23,6 +23,9 @@ boot() {
 	#echo 800000 > /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq
 	#echo 20 > /sys/devices/system/cpu/cpufreq/ondemand/up_threshold
 	#echo 10 > /sys/devices/system/cpu/cpufreq/ondemand/sampling_down_factor
+
+
+	cp /usr/share/vim/vimrc /root/.vimrc
 	
 	#nlbwmon fix
 	sysctl -w vm.min_free_kbytes=65536
