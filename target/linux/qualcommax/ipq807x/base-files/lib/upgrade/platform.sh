@@ -166,8 +166,8 @@ platform_do_upgrade() {
 		nand_do_upgrade "$1"
 		;;
 	zyxel,nbg7815)
-		echo 3 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/led_pattern
-		echo 1 > /sys/devices/platform/soc/78b6000.i2c/i2c-0/0-0032/run_engine
+		echo 3 > /sys/devices/platform/soc@0/78b6000.i2c/i2c-0/0-0032/led_pattern
+		echo 1 > /sys/devices/platform/soc@0/78b6000.i2c/i2c-0/0-0032/run_engine
 		local config_mtdnum="$(find_mtd_index 0:bootconfig)"
 		[ -z "$config_mtdnum" ] && reboot
 		part_num="$(hexdump -e '1/1 "%01x|"' -n 1 -s 168 -C /dev/mtd$config_mtdnum | cut -f 1 -d "|" | head -n1)"
