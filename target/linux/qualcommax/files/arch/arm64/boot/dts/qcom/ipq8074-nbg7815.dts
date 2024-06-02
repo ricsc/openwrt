@@ -267,14 +267,6 @@
 				label = "0:art";
 				reg = <0x610000 0x40000>;
 				read-only;
-
-				compatible = "nvmem-cells";
-				#address-cells = <1>;
-				#size-cells = <1>;
-
-				precal_radio: precal@1000 {
-					reg = <0x1000 0x20000>;
-				};
 			};
 
 			partition@650000 {
@@ -697,6 +689,4 @@
 	status = "okay";
 
 	qcom,ath11k-calibration-variant = "Zyxel-NBG7815";
-	nvmem-cells = <&precal_radio>;
-	nvmem-cell-names = "pre-calibration";
 };
