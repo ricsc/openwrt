@@ -34,19 +34,19 @@ cpu_temp() {
 }
 
 wifi0_temp() {
-       cat /sys/devices/platform/soc/c000000.wifi/ieee80211/phy0/hwmon*/temp1_input
+       cat /sys/devices/platform/soc@0/c000000.wifi/ieee80211/phy0/hwmon*/temp1_input
 }
 
 wifi1_temp() {
-	 cat /sys/devices/platform/soc/c000000.wifi/ieee80211/phy1/hwmon*/temp1_input
+	 cat /sys/devices/platform/soc@0/c000000.wifi/ieee80211/phy1/hwmon*/temp1_input
 }
 
 wifi2_temp() {
-	 cat /sys/devices/platform/soc/c000000.wifi/ieee80211/phy2/hwmon*/temp1_input
+	 cat /sys/devices/platform/soc@0/c000000.wifi/ieee80211/phy2/hwmon*/temp1_input
 }
 
 aqr_temp() {
-	cat /sys/devices/platform/soc/90000.mdio/mdio_bus/90000.mdio-1/90000.mdio-1:08/hwmon/hwmon*/temp1_input
+	cat /sys/devices/platform/soc@0/90000.mdio/mdio_bus/90000.mdio-1/90000.mdio-1:08/hwmon/hwmon*/temp1_input
 }
 
 check_temps() {
