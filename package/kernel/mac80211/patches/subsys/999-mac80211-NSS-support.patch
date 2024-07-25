@@ -1,3 +1,13 @@
+--- a/local-symbols
++++ b/local-symbols
+@@ -31,6 +31,7 @@ LIB80211_CRYPT_CCMP=
+ LIB80211_CRYPT_TKIP=
+ LIB80211_DEBUG=
+ MAC80211=
++MAC80211_NSS_SUPPORT=
+ MAC80211_HAS_RC=
+ MAC80211_RC_MINSTREL=
+ MAC80211_RC_DEFAULT_MINSTREL=
 --- a/net/mac80211/Kconfig
 +++ b/net/mac80211/Kconfig
 @@ -19,6 +19,13 @@ comment "CFG80211 needs to be enabled fo
@@ -14,16 +24,6 @@
  config MAC80211_HAS_RC
  	bool
  
---- a/local-symbols
-+++ b/local-symbols
-@@ -39,6 +39,7 @@ LIB80211_CRYPT_CCMP=
- LIB80211_CRYPT_TKIP=
- LIB80211_DEBUG=
- MAC80211=
-+MAC80211_NSS_SUPPORT=
- MAC80211_HAS_RC=
- MAC80211_RC_MINSTREL=
- MAC80211_RC_DEFAULT_MINSTREL=
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
 @@ -36,6 +36,10 @@
@@ -35,9 +35,9 @@
 +#endif
 +
  struct ieee80211_local;
+ struct ieee80211_mesh_fast_tx;
  
- /* Maximum number of broadcast/multicast frames to buffer when some of the
-@@ -1097,6 +1101,12 @@ struct ieee80211_sub_if_data {
+@@ -1118,6 +1122,11 @@ struct ieee80211_sub_if_data {
  	} debugfs;
  #endif
  
@@ -46,7 +46,6 @@
 +	struct sk_buff_head rx_queue;
 +	struct work_struct rx_work;
 +#endif
-+
  	/* must be last, dynamically sized area in this! */
  	struct ieee80211_vif vif;
  };
@@ -73,7 +72,7 @@
  /**
   * DOC: Interface list locking
   *
-@@ -439,6 +446,64 @@ static int ieee80211_open(struct net_dev
+@@ -441,6 +448,64 @@ static int ieee80211_open(struct net_dev
  	return err;
  }
  
@@ -138,7 +137,7 @@
  static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata, bool going_down)
  {
  	struct ieee80211_local *local = sdata->local;
-@@ -800,8 +865,24 @@ static void ieee80211_teardown_sdata(str
+@@ -802,8 +867,24 @@ static void ieee80211_teardown_sdata(str
  	ieee80211_link_stop(&sdata->deflink);
  }
  
@@ -163,7 +162,7 @@
  	ieee80211_teardown_sdata(IEEE80211_DEV_TO_SUB_IF(dev));
  }
  
-@@ -814,6 +895,9 @@ ieee80211_get_stats64(struct net_device
+@@ -831,6 +912,9 @@ static int ieee80211_netdev_setup_tc(str
  static const struct net_device_ops ieee80211_dataif_ops = {
  	.ndo_open		= ieee80211_open,
  	.ndo_stop		= ieee80211_stop,
@@ -236,7 +235,7 @@
  /*
   * monitor mode reception
   *
-@@ -2635,10 +2689,16 @@ static void ieee80211_deliver_skb_to_loc
+@@ -2611,6 +2665,11 @@ static void ieee80211_deliver_skb_to_loc
  			ether_addr_copy(ehdr->h_dest, sdata->vif.addr);
  
  		/* deliver to local stack */
@@ -246,7 +245,10 @@
 +		}
 +#else
  		if (rx->list)
+ #if LINUX_VERSION_IS_GEQ(4,19,0)
  			list_add_tail(&skb->list, rx->list);
+@@ -2619,6 +2678,7 @@ static void ieee80211_deliver_skb_to_loc
+ #endif
  		else
  			netif_receive_skb(skb);
 +#endif
@@ -267,10 +269,11 @@
  /* misc utils */
  
  static __le16 ieee80211_duration(struct ieee80211_tx_data *tx,
-@@ -1729,6 +1734,16 @@ static bool ieee80211_tx_frags(struct ie
+@@ -1734,7 +1739,16 @@ static bool ieee80211_tx_frags(struct ie
  					return true;
  				}
  			} else {
+-
 +#ifdef CPTCFG_MAC80211_NSS_SUPPORT
 +				if (skb_queue_len(&local->pending[q]) >= 1000) {
 +					spin_unlock_irqrestore(
@@ -281,10 +284,10 @@
 +					return false;
 +				}
 +#endif
- 
  				/*
  				 * Since queue is stopped, queue up frames for
-@@ -4448,6 +4463,35 @@ static void ieee80211_mlo_multicast_tx(s
+ 				 * later transmission from the tx-pending
+@@ -4477,6 +4491,35 @@ static void ieee80211_mlo_multicast_tx(s
  	kfree_skb(skb);
  }
  
@@ -320,7 +323,7 @@
  /**
   * ieee80211_subif_start_xmit - netif start_xmit function for 802.3 vifs
   * @skb: packet to be sent
-@@ -4461,6 +4505,10 @@ netdev_tx_t ieee80211_subif_start_xmit(s
+@@ -4490,6 +4533,10 @@ netdev_tx_t ieee80211_subif_start_xmit(s
  	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
  	const struct ethhdr *eth = (void *)skb->data;
  
@@ -331,7 +334,7 @@
  	if (likely(!is_multicast_ether_addr(eth->h_dest)))
  		goto normal;
  
-@@ -4646,6 +4694,10 @@ netdev_tx_t ieee80211_subif_start_xmit_8
+@@ -4675,6 +4722,10 @@ netdev_tx_t ieee80211_subif_start_xmit_8
  	struct ieee80211_key *key;
  	struct sta_info *sta;
  
