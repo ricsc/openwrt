@@ -189,3 +189,13 @@ Signed-off-by: Phil Elwell <phil@raspberrypi.com>
  	fwreq = brcmf_sdio_prepare_fw_request(bus);
  	if (!fwreq) {
  		ret = -ENOMEM;
+--- a/net/mac80211/vht.c
++++ b/net/mac80211/vht.c
+@@ -122,7 +122,6 @@ ieee80211_vht_cap_ie_to_sta_vht_cap(stru
+ 	struct ieee80211_sta_vht_cap *vht_cap = &link_sta->pub->vht_cap;
+ 	struct ieee80211_sta_vht_cap own_cap;
+ 	u32 cap_info, i;
+-	bool have_80mhz;
+ 	bool can_vht;
+ 	u32 mpdu_len;
+ 
